@@ -1,0 +1,17 @@
+{
+  "name": "waitwise-workspace",
+  "version": "1.0.0",
+  "description": "WAITWISE - Real-Time Intelligent Campus Queue & Crowd Management System",
+  "private": true,
+  "scripts": {
+    "start": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "backend": "npm --prefix backend start",
+    "backend:dev": "npm --prefix backend run dev",
+    "frontend": "npm --prefix frontend run dev",
+    "seed": "npm --prefix backend run seed",
+    "test": "npm --prefix backend test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
