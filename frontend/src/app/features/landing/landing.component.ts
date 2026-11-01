@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { OrganisationService } from '../../core/services/organisation.service';
@@ -257,25 +257,11 @@ export interface IndustrySector {
     </div>
   `
 })
-export class LandingComponent {
+export class LandingComponent implements OnInit {
   orgService = inject(OrganisationService);
   authService = inject(AuthService);
   geoService = inject(GeolocationService);
   private router = inject(Router);
-
-  activeSectorId = signal<string>('healthcare');
-  simPeopleAhead = signal<number>(4);
-
-  constructor() {
-    // If an org is already selected, sync active sector
-    const current = this.orgService.currentOrganisation();
-    if (current && current.type) {
-      const match = this.sectors.find(s => s.id === current.type || s.slug === current.slug);
-      if (match) {
-        this.activeSectorId.set(match.id);
-      }
-    }
-  }
 
   sectors: IndustrySector[] = [
     {
@@ -336,9 +322,22 @@ export class LandingComponent {
     }
   ];
 
+  activeSectorId = signal<string>('healthcare');
+  simPeopleAhead = signal<number>(4);
+
   currentSector = computed<IndustrySector>(() => {
     return this.sectors.find(s => s.id === this.activeSectorId()) || this.sectors[0];
   });
+
+  ngOnInit() {
+    const current = this.orgService.currentOrganisation();
+    if (current && current.type) {
+      const match = this.sectors.find(s => s.id === current.type || s.slug === current.slug);
+      if (match) {
+        this.activeSectorId.set(match.id);
+      }
+    }
+  }
 
   onSelectSector(sec: IndustrySector) {
     this.activeSectorId.set(sec.id);
@@ -347,7 +346,7 @@ export class LandingComponent {
 
   openSectorWorkspace(sec: IndustrySector) {
     this.onSelectSector(sec);
-    this.router.navigate(['/services']);
+    this.router.navigate(['/services'], { queryParams: { sector: sec.id } });
   }
 
   get demoResult() {

@@ -1,6 +1,6 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { QueueService } from '../../core/services/queue.service';
@@ -43,6 +43,53 @@ import { Service } from '../../core/models/service.model';
               <span>🖥️ Kiosk Terminal</span>
             </a>
           </div>
+        </div>
+
+        <!-- Sector Quick Selector Bar -->
+        <div class="mt-4 pt-4 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center gap-2 overflow-x-auto pb-1">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1">Workspace Sector:</span>
+          <button
+            type="button"
+            (click)="selectSectorQuick('healthcare')"
+            [ngClass]="orgService.currentOrganisation()?.type === 'healthcare'
+              ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-500/20'
+              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0">
+            <span>🏥 Healthcare &amp; Clinical</span>
+          </button>
+          <button
+            type="button"
+            (click)="selectSectorQuick('banking')"
+            [ngClass]="orgService.currentOrganisation()?.type === 'banking'
+              ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-500/20'
+              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0">
+            <span>🏦 Banking &amp; Financial</span>
+          </button>
+          <button
+            type="button"
+            (click)="selectSectorQuick('government')"
+            [ngClass]="orgService.currentOrganisation()?.type === 'government'
+              ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-500/20'
+              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0">
+            <span>🏛️ Public &amp; Government</span>
+          </button>
+          <button
+            type="button"
+            (click)="selectSectorQuick('education')"
+            [ngClass]="orgService.currentOrganisation()?.type === 'education'
+              ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-500/20'
+              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0">
+            <span>🎓 Higher Education</span>
+          </button>
+          <button
+            type="button"
+            (click)="loadAllServices()"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200">
+            <span>🌐 All Facilities</span>
+          </button>
         </div>
 
         <!-- Filter & Search Toolbar -->
@@ -193,6 +240,7 @@ export class ServicesCatalogComponent implements OnInit, OnDestroy {
   queueService = inject(QueueService);
   orgService = inject(OrganisationService);
   socketService = inject(SocketService);
+  private route = inject(ActivatedRoute);
 
   services = signal<Service[]>([]);
   isLoading = signal<boolean>(false);
@@ -232,19 +280,16 @@ export class ServicesCatalogComponent implements OnInit, OnDestroy {
     return list;
   });
 
-  constructor() {
-    effect(() => {
-      const org = this.orgService.currentOrganisation();
-      if (org && org._id) {
-        this.loadCatalog(org._id);
-      } else {
-        this.loadAllServices();
-      }
-    });
-  }
-
   ngOnInit() {
-    this.loadCatalog();
+    this.sub.add(
+      this.route.queryParams.subscribe(params => {
+        if (params['sector']) {
+          this.selectSectorQuick(params['sector']);
+        } else {
+          this.loadCatalog();
+        }
+      })
+    );
 
     this.sub.add(
       this.socketService.queueUpdated$.subscribe((data) => {
@@ -265,6 +310,16 @@ export class ServicesCatalogComponent implements OnInit, OnDestroy {
         }
       })
     );
+  }
+
+  selectSectorQuick(type: string) {
+    this.orgService.selectSector(type);
+    const org = this.orgService.organisations().find(o => o.type === type || o.slug === type);
+    if (org) {
+      this.loadCatalog(org._id);
+    } else {
+      this.loadCatalog();
+    }
   }
 
   loadCatalog(orgId?: string) {
