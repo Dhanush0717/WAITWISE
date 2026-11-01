@@ -6,6 +6,17 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const connectDB = require('./config/db');
+
+// Explicitly register all Mongoose models
+require('./models/Organisation');
+require('./models/Branch');
+require('./models/User');
+require('./models/Service');
+require('./models/Counter');
+require('./models/Ticket');
+require('./models/QueueSession');
+require('./models/Notification');
+require('./models/AuditLog');
 const { initSocket } = require('./sockets/socketHandler');
 const errorHandler = require('./middleware/errorHandler');
 

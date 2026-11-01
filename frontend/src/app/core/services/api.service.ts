@@ -12,11 +12,15 @@ export class ApiService {
   get<T>(endpoint: string, params?: any): Observable<T> {
     let httpParams = new HttpParams();
     if (params) {
-      Object.keys(params).forEach(key => {
-        if (params[key] !== undefined && params[key] !== null) {
-          httpParams = httpParams.set(key, params[key]);
-        }
-      });
+      if (typeof params === 'object') {
+        Object.keys(params).forEach(key => {
+          if (params[key] !== undefined && params[key] !== null) {
+            httpParams = httpParams.set(key, String(params[key]));
+          }
+        });
+      } else if (typeof params === 'string') {
+        httpParams = httpParams.set('organisationId', params);
+      }
     }
     return this.http.get<T>(`${this.baseUrl}${endpoint}`, { params: httpParams });
   }

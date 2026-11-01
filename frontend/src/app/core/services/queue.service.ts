@@ -43,7 +43,13 @@ export class QueueService {
     }
   }
 
-  getServices(params?: any): Observable<Service[]> {
+  getServices(queryOrOrgId?: any): Observable<Service[]> {
+    let params: any = undefined;
+    if (typeof queryOrOrgId === 'string' && queryOrOrgId.trim()) {
+      params = { organisationId: queryOrOrgId.trim() };
+    } else if (queryOrOrgId && typeof queryOrOrgId === 'object') {
+      params = queryOrOrgId;
+    }
     return this.api.get<any>('/services', params).pipe(
       map(res => (res && res.data) ? res.data : (Array.isArray(res) ? res : []))
     );

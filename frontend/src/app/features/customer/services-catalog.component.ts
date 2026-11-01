@@ -22,15 +22,15 @@ import { Service } from '../../core/models/service.model';
               <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300 capitalize">
                 {{ orgService.currentOrganisation()?.type || 'Universal' }} Workspace
               </span>
-              <span class="text-xs text-slate-400 font-medium">
-                {{ orgService.currentOrganisation()?.name || 'All Organizations' }}
+              <span class="text-xs text-slate-500 font-semibold">
+                {{ orgService.currentOrganisation()?.name || 'All Active Facilities' }}
               </span>
             </div>
             <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
               {{ orgService.serviceLabel() }} Directory
             </h1>
             <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Select any {{ orgService.serviceLabel().toLowerCase() }} to join the virtual queue, view active counters, or monitor live wait times.
+              Select any counter desk or service department to join the live virtual queue.
             </p>
           </div>
 
@@ -83,87 +83,108 @@ import { Service } from '../../core/models/service.model';
         </div>
 
         <!-- Services Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div
-            *ngFor="let svc of filteredServices()"
-            class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
-            
-            <!-- Top Card Header -->
-            <div>
-              <div class="flex items-start justify-between gap-3 mb-3">
-                <div class="flex items-center gap-2.5">
-                  <div class="w-10 h-10 rounded-2xl bg-brand-50 dark:bg-brand-950 text-brand-600 flex items-center justify-center font-bold text-lg">
-                    {{ svc.icon || '📌' }}
-                  </div>
-                  <div>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ svc.code }} &bull; {{ svc.category }}</span>
-                    <h3 class="font-bold text-base text-slate-900 dark:text-white group-hover:text-brand-600 transition-colors">
-                      {{ svc.name }}
-                    </h3>
-                  </div>
-                </div>
-
-                <!-- Status Badge -->
-                <span
-                  [ngClass]="{
-                    'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200': svc.status === 'ACTIVE',
-                    'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border-amber-200': svc.status === 'PAUSED',
-                    'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200': svc.status === 'CLOSED'
-                  }"
-                  class="px-2 py-0.5 rounded-full text-[10px] font-bold border">
-                  {{ svc.status }}
-                </span>
-              </div>
-
-              <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-4 leading-relaxed">
-                {{ svc.description || 'Quick and efficient service desk.' }}
-              </p>
-
-              <!-- Location & Hours Info -->
-              <div class="flex items-center gap-3 text-[11px] text-slate-400 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
-                <span *ngIf="svc.location?.building">📍 {{ svc.location.building }}</span>
-                <span *ngIf="svc.location?.floor">Floor {{ svc.location.floor }}</span>
-                <span>⏱️ ~{{ svc.avgServiceDuration }}m / person</span>
-              </div>
-
-              <!-- Live Queue Metrics -->
-              <div class="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 mb-5 text-center">
-                <div>
-                  <span class="block text-[10px] text-slate-400 uppercase font-semibold">Waiting</span>
-                  <span class="font-mono font-bold text-base text-slate-900 dark:text-white">{{ svc.waitingCount || 0 }}</span>
-                </div>
-                <div>
-                  <span class="block text-[10px] text-slate-400 uppercase font-semibold">Serving</span>
-                  <span class="font-mono font-bold text-base text-brand-600 dark:text-brand-400">{{ svc.currentServingToken || '-' }}</span>
-                </div>
-                <div>
-                  <span class="block text-[10px] text-slate-400 uppercase font-semibold">Est. Wait</span>
-                  <span class="font-mono font-bold text-base text-slate-900 dark:text-white">{{ (svc.waitingCount || 0) * (svc.avgServiceDuration || 5) }}m</span>
+        @if (isLoading()) {
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div *ngFor="let _ of [1, 2, 3]" class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm animate-pulse space-y-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-slate-200 dark:bg-slate-800"></div>
+                <div class="space-y-1.5 flex-1">
+                  <div class="h-3 bg-slate-200 dark:bg-slate-800 rounded w-1/3"></div>
+                  <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded w-2/3"></div>
                 </div>
               </div>
-            </div>
-
-            <!-- Card Bottom Actions -->
-            <div class="flex items-center gap-2">
-              <a
-                [routerLink]="['/services', svc._id || (svc | json)]"
-                class="flex-1 py-2.5 px-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs text-center shadow-xs transition-all active:scale-[0.98]">
-                Join Virtual Queue &rarr;
-              </a>
+              <div class="h-3 bg-slate-200 dark:bg-slate-800 rounded w-full"></div>
+              <div class="h-16 bg-slate-100 dark:bg-slate-800/60 rounded-2xl"></div>
+              <div class="h-9 bg-slate-200 dark:bg-slate-800 rounded-xl"></div>
             </div>
           </div>
-        </div>
+        } @else {
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            @for (svc of filteredServices(); track (svc._id || svc.id)) {
+              <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group">
+                <!-- Top Card Header -->
+                <div>
+                  <div class="flex items-start justify-between gap-3 mb-3">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-10 h-10 rounded-2xl bg-brand-50 dark:bg-brand-950 text-brand-600 flex items-center justify-center font-bold text-lg">
+                        {{ getServiceIcon(svc) }}
+                      </div>
+                      <div>
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ svc.code }} &bull; {{ svc.category || 'General' }}</span>
+                        <h3 class="font-bold text-base text-slate-900 dark:text-white group-hover:text-brand-600 transition-colors">
+                          {{ svc.name }}
+                        </h3>
+                      </div>
+                    </div>
 
-        <!-- Empty State -->
-        <div *ngIf="filteredServices().length === 0" class="py-16 text-center">
-          <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3 text-2xl">
-            📂
+                    <!-- Status Badge -->
+                    <span
+                      [ngClass]="{
+                        'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200': getStatus(svc) === 'ACTIVE',
+                        'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border-amber-200': getStatus(svc) === 'PAUSED',
+                        'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border-slate-200': getStatus(svc) === 'CLOSED'
+                      }"
+                      class="px-2 py-0.5 rounded-full text-[10px] font-bold border">
+                      {{ getStatus(svc) }}
+                    </span>
+                  </div>
+
+                  <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mb-4 leading-relaxed">
+                    {{ svc.description || 'Professional service desk with virtual queueing.' }}
+                  </p>
+
+                  <!-- Location & Hours Info -->
+                  <div class="flex items-center gap-3 text-[11px] text-slate-400 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+                    <span>📍 {{ getLocationInfo(svc) }}</span>
+                    <span>⏱️ ~{{ getEstimatedDuration(svc) }}m / person</span>
+                  </div>
+
+                  <!-- Live Queue Metrics -->
+                  <div class="grid grid-cols-3 gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 mb-5 text-center">
+                    <div>
+                      <span class="block text-[10px] text-slate-400 uppercase font-semibold">Waiting</span>
+                      <span class="font-mono font-bold text-base text-slate-900 dark:text-white">{{ getWaitingCount(svc) }}</span>
+                    </div>
+                    <div>
+                      <span class="block text-[10px] text-slate-400 uppercase font-semibold">Serving</span>
+                      <span class="font-mono font-bold text-base text-brand-600 dark:text-brand-400">{{ getServingToken(svc) }}</span>
+                    </div>
+                    <div>
+                      <span class="block text-[10px] text-slate-400 uppercase font-semibold">Est. Wait</span>
+                      <span class="font-mono font-bold text-base text-slate-900 dark:text-white">{{ getWaitingCount(svc) * getEstimatedDuration(svc) }}m</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Card Bottom Action -->
+                <div class="flex items-center gap-2">
+                  <a
+                    [routerLink]="['/services', (svc._id || svc.id)]"
+                    class="flex-1 py-2.5 px-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs text-center shadow-xs transition-all active:scale-[0.98]">
+                    Join Virtual Queue &rarr;
+                  </a>
+                </div>
+              </div>
+            } @empty {
+              <!-- Empty State -->
+              <div class="col-span-full py-16 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-8">
+                <div class="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3 text-2xl">
+                  📂
+                </div>
+                <h3 class="text-base font-bold text-slate-800 dark:text-white">No Desks Configured for This Sector</h3>
+                <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto mb-4">
+                  Switch facilities using the top dropdown or click below to view all services across the platform.
+                </p>
+                <button
+                  type="button"
+                  (click)="loadAllServices()"
+                  class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-xs">
+                  View All Available Desks
+                </button>
+              </div>
+            }
           </div>
-          <h3 class="text-base font-bold text-slate-700 dark:text-slate-300">No Services Found</h3>
-          <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-            Try adjusting your search criteria or register a new service in the management console.
-          </p>
-        </div>
+        }
       </div>
     </div>
   `
@@ -174,6 +195,7 @@ export class ServicesCatalogComponent implements OnInit, OnDestroy {
   socketService = inject(SocketService);
 
   services = signal<Service[]>([]);
+  isLoading = signal<boolean>(false);
   searchQuery = '';
   selectedCategory = signal<string>('ALL');
   private sub = new Subscription();
@@ -204,24 +226,26 @@ export class ServicesCatalogComponent implements OnInit, OnDestroy {
       list = list.filter(s =>
         s.name.toLowerCase().includes(query) ||
         s.code.toLowerCase().includes(query) ||
-        s.description?.toLowerCase().includes(query)
+        (s.description && s.description.toLowerCase().includes(query))
       );
     }
     return list;
   });
 
   constructor() {
-    // Automatically re-fetch whenever the active organization updates
     effect(() => {
       const org = this.orgService.currentOrganisation();
-      this.loadCatalog(org?._id);
+      if (org && org._id) {
+        this.loadCatalog(org._id);
+      } else {
+        this.loadAllServices();
+      }
     });
   }
 
   ngOnInit() {
     this.loadCatalog();
 
-    // Listen to real-time queue update broadcasts
     this.sub.add(
       this.socketService.queueUpdated$.subscribe((data) => {
         if (data && data.serviceId) {
@@ -244,13 +268,74 @@ export class ServicesCatalogComponent implements OnInit, OnDestroy {
   }
 
   loadCatalog(orgId?: string) {
-    const id = orgId || this.orgService.currentOrganisation()?._id;
+    this.isLoading.set(true);
+    const id = orgId || this.orgService.currentOrganisation()?._id || (this.orgService.currentOrganisation() as any)?.id;
     this.queueService.getServices(id ? { organisationId: id } : undefined).subscribe({
       next: (data) => {
+        this.isLoading.set(false);
         const list = Array.isArray(data) ? data : (data as any)?.data || [];
-        this.services.set(list);
+        if (list.length > 0 || !id) {
+          this.services.set(list);
+        } else {
+          // If active org currently has 0 services, fallback to all available services
+          this.loadAllServices();
+        }
+      },
+      error: () => {
+        this.isLoading.set(false);
+        this.loadAllServices();
       }
     });
+  }
+
+  loadAllServices() {
+    this.isLoading.set(true);
+    this.queueService.getServices().subscribe({
+      next: (data) => {
+        this.isLoading.set(false);
+        const list = Array.isArray(data) ? data : (data as any)?.data || [];
+        this.services.set(list);
+      },
+      error: () => {
+        this.isLoading.set(false);
+      }
+    });
+  }
+
+  getServiceIcon(svc: any): string {
+    if (svc.icon) return svc.icon;
+    const cat = (svc.category || '').toLowerCase();
+    if (cat.includes('consult') || cat.includes('health') || cat.includes('opd')) return '🩺';
+    if (cat.includes('lab') || cat.includes('diag')) return '🧪';
+    if (cat.includes('pharm')) return '💊';
+    if (cat.includes('cash') || cat.includes('bank') || cat.includes('money')) return '💵';
+    if (cat.includes('loan') || cat.includes('credit')) return '💳';
+    if (cat.includes('pass') || cat.includes('travel')) return '🛂';
+    if (cat.includes('admin') || cat.includes('exam') || cat.includes('college')) return '🎓';
+    return '📌';
+  }
+
+  getStatus(svc: any): string {
+    return (svc.status || 'ACTIVE').toUpperCase();
+  }
+
+  getLocationInfo(svc: any): string {
+    if (svc.location?.room && svc.location?.building) {
+      return `${svc.location.building} (${svc.location.room})`;
+    }
+    return svc.location?.building || svc.location?.room || 'Main Campus';
+  }
+
+  getWaitingCount(svc: any): number {
+    return svc.stats?.waitingCount ?? svc.waitingCount ?? 0;
+  }
+
+  getServingToken(svc: any): string {
+    return svc.currentServingToken || svc.stats?.currentServingToken || '-';
+  }
+
+  getEstimatedDuration(svc: any): number {
+    return svc.estimatedServiceTimeMinutes || svc.avgServiceDuration || 6;
   }
 
   ngOnDestroy() {

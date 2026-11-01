@@ -1,6 +1,8 @@
 const Service = require('../models/Service');
 const Counter = require('../models/Counter');
 const Ticket = require('../models/Ticket');
+const Organisation = require('../models/Organisation');
+const Branch = require('../models/Branch');
 const { calculateWaitTime } = require('../utils/predictionEngine');
 const { emitToService, emitToAdmin } = require('../sockets/socketHandler');
 const { logAction } = require('../utils/auditLogger');

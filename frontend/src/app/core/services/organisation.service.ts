@@ -14,6 +14,7 @@ export class OrganisationService {
   currentOrganisation = signal<Organisation | null>(null);
   branches = signal<Branch[]>([]);
   isLoading = signal<boolean>(false);
+  private pendingSector: string | null = null;
 
   // Dynamic Multi-Industry Terminology Computeds
   terminology = computed<OrganisationTerminology>(() => {
@@ -51,10 +52,20 @@ export class OrganisationService {
         this.isLoading.set(false);
         this.organisations.set(orgs || []);
         
+        // If a sector was queued while loading, activate it
+        if (this.pendingSector && orgs && orgs.length > 0) {
+          const match = orgs.find(o => o.slug === this.pendingSector || o.type === this.pendingSector);
+          if (match) {
+            this.pendingSector = null;
+            this.setOrganisation(match);
+            return;
+          }
+        }
+
         // Restore last chosen org from local storage, or default to first
         const savedOrgId = localStorage.getItem('waitwise_active_org_id');
         if (savedOrgId && orgs && orgs.length > 0) {
-          const found = orgs.find(o => o._id === savedOrgId || (o as any).id === savedOrgId);
+          const found = orgs.find(o => o._id === savedOrgId || (o as any).id === savedOrgId || o.slug === savedOrgId);
           if (found) {
             this.setOrganisation(found);
             return;
@@ -65,6 +76,20 @@ export class OrganisationService {
         }
       })
     );
+  }
+
+  selectSector(slugOrType: string): Organisation | null {
+    const orgs = this.organisations();
+    if (orgs && orgs.length > 0) {
+      const found = orgs.find(o => o.slug === slugOrType || o.type === slugOrType || o._id === slugOrType);
+      if (found) {
+        this.setOrganisation(found);
+        return found;
+      }
+    }
+    // Queue pending sector if data hasn't arrived yet
+    this.pendingSector = slugOrType;
+    return null;
   }
 
   setOrganisation(org: Organisation) {

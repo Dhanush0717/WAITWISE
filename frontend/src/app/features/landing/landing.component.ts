@@ -5,7 +5,7 @@ import { OrganisationService } from '../../core/services/organisation.service';
 import { AuthService } from '../../core/services/auth.service';
 import { GeolocationService } from '../../core/services/geolocation.service';
 
-export interface IndustryPreset {
+export interface IndustrySector {
   id: string;
   slug: string;
   icon: string;
@@ -26,7 +26,7 @@ export interface IndustryPreset {
   imports: [CommonModule, RouterModule],
   template: `
     <div class="relative overflow-hidden bg-slate-50 dark:bg-slate-950 min-h-screen">
-      <!-- Background Glow Orbs -->
+      <!-- Background Ambient Glow -->
       <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-brand-500/10 via-indigo-500/5 to-transparent blur-3xl pointer-events-none"></div>
 
       <!-- Hero Section -->
@@ -51,7 +51,7 @@ export interface IndustryPreset {
           </p>
 
           <!-- Primary CTAs -->
-          <div class="flex flex-wrap items-center justify-center gap-4 mb-12">
+          <div class="flex flex-wrap items-center justify-center gap-4 mb-14">
             <a routerLink="/services" class="px-6 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm shadow-lg shadow-brand-500/25 transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -71,64 +71,72 @@ export interface IndustryPreset {
             </a>
           </div>
 
-          <!-- Live Multi-Industry Preset Interactive Switcher -->
-          <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 shadow-xl max-w-4xl mx-auto text-left">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 gap-3">
-              <div>
-                <span class="text-xs font-bold text-brand-600 uppercase tracking-wider">Multi-Tenant Engine</span>
-                <h3 class="text-lg font-bold text-slate-900 dark:text-white">Select Any Industry to Preview Dynamic Adaptation</h3>
-              </div>
-              <span class="text-xs text-slate-400">Zero code changes required per industry</span>
+          <!-- Professional Sector Selector Card -->
+          <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xl max-w-4xl mx-auto text-left">
+            <div class="pb-5 border-b border-slate-100 dark:border-slate-800">
+              <span class="text-xs font-bold text-brand-600 uppercase tracking-wider">Universal Queue Ecosystem</span>
+              <h3 class="text-xl font-black text-slate-900 dark:text-white mt-1">Select Service Sector</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Switch workspaces to observe queue orchestration tailored for each operational domain.
+              </p>
             </div>
 
-            <!-- Industry Selector Tabs -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-5">
-              @for (ind of industries; track ind.id) {
+            <!-- 4 Industry Sector Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-6">
+              @for (sec of sectors; track sec.id) {
                 <button
                   type="button"
-                  (click)="selectIndustry(ind.id)"
-                  [ngClass]="activeIndustry() === ind.id 
-                    ? 'bg-brand-50 border-brand-500 text-brand-700 dark:bg-brand-950 dark:text-brand-300 shadow-md ring-2 ring-brand-500/20' 
-                    : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'"
-                  class="p-4 rounded-2xl border-2 text-left transition-all cursor-pointer">
-                  <div class="text-3xl mb-1.5">{{ ind.icon }}</div>
-                  <div class="font-black text-sm text-slate-900 dark:text-white">{{ ind.name }}</div>
-                  <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ ind.subtitle }}</div>
+                  (click)="onSelectSector(sec)"
+                  [ngClass]="activeSectorId() === sec.id 
+                    ? 'border-brand-500 bg-brand-50/70 dark:bg-brand-950/40 text-brand-900 dark:text-brand-100 shadow-md ring-2 ring-brand-500/25' 
+                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700'"
+                  class="p-4 rounded-2xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between">
+                  <div>
+                    <div class="text-3xl mb-2">{{ sec.icon }}</div>
+                    <div class="font-black text-sm">{{ sec.name }}</div>
+                    <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">{{ sec.subtitle }}</div>
+                  </div>
+                  <div class="mt-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 text-[10px] font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                    {{ activeSectorId() === sec.id ? '✓ Active Workspace' : 'Select Sector' }}
+                  </div>
                 </button>
               }
             </div>
 
-            <!-- Preview Card for Selected Industry -->
-            <div class="mt-6 p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700 grid grid-cols-1 md:grid-cols-3 gap-5">
+            <!-- Active Workspace Detail Preview -->
+            <div class="mt-6 p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
               <div>
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Configured Terminology</span>
-                <div class="mt-2 space-y-1.5 text-xs">
-                  <div class="flex justify-between"><span class="text-slate-500">Service Label:</span> <strong class="text-slate-900 dark:text-white">{{ currentPreset().serviceLabel }}</strong></div>
-                  <div class="flex justify-between"><span class="text-slate-500">Token Label:</span> <strong class="text-slate-900 dark:text-white">{{ currentPreset().tokenLabel }}</strong></div>
-                  <div class="flex justify-between"><span class="text-slate-500">Counter Label:</span> <strong class="text-slate-900 dark:text-white">{{ currentPreset().counterLabel }}</strong></div>
-                  <div class="flex justify-between"><span class="text-slate-500">Staff Label:</span> <strong class="text-slate-900 dark:text-white">{{ currentPreset().staffLabel }}</strong></div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Domain Terminology</span>
+                <div class="space-y-1 text-xs">
+                  <div class="flex justify-between"><span class="text-slate-500">Service:</span> <strong class="text-slate-900 dark:text-white">{{ currentSector().serviceLabel }}</strong></div>
+                  <div class="flex justify-between"><span class="text-slate-500">Token:</span> <strong class="text-slate-900 dark:text-white">{{ currentSector().tokenLabel }}</strong></div>
+                  <div class="flex justify-between"><span class="text-slate-500">Counter:</span> <strong class="text-slate-900 dark:text-white">{{ currentSector().counterLabel }}</strong></div>
+                  <div class="flex justify-between"><span class="text-slate-500">Staff:</span> <strong class="text-slate-900 dark:text-white">{{ currentSector().staffLabel }}</strong></div>
                 </div>
               </div>
 
               <div>
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Example Active Department</span>
-                <div class="mt-2 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Live Department Pacing</span>
+                <div class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs">
                   <div class="font-bold text-slate-900 dark:text-white flex items-center justify-between">
-                    <span>{{ currentPreset().sampleService }}</span>
-                    <span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-[10px] font-bold">Active</span>
+                    <span>{{ currentSector().sampleService }}</span>
+                    <span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-[10px] font-bold">Online</span>
                   </div>
                   <div class="text-[11px] text-slate-500 mt-2">
-                    Waiting: <strong class="text-slate-900 dark:text-white">{{ currentPreset().sampleWaiting }}</strong> &bull; Serving: <strong class="text-brand-600">{{ currentPreset().sampleToken }}</strong>
+                    Waiting: <strong class="text-slate-900 dark:text-white">{{ currentSector().sampleWaiting }}</strong> &bull; Serving: <strong class="text-brand-600">{{ currentSector().sampleToken }}</strong>
                   </div>
                 </div>
               </div>
 
-              <div class="flex flex-col justify-center">
+              <div>
                 <button
                   type="button"
-                  (click)="applyIndustryDemo(currentPreset().slug)"
-                  class="w-full py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/20 transition-all text-center">
-                  Launch {{ currentPreset().name }} Workspace &rarr;
+                  (click)="openSectorWorkspace(currentSector())"
+                  class="w-full py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/25 transition-all text-center flex items-center justify-center gap-2">
+                  <span>Open {{ currentSector().name }}</span>
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -255,30 +263,41 @@ export class LandingComponent {
   geoService = inject(GeolocationService);
   private router = inject(Router);
 
-  activeIndustry = signal<string>('healthcare');
+  activeSectorId = signal<string>('healthcare');
   simPeopleAhead = signal<number>(4);
 
-  industries: IndustryPreset[] = [
+  constructor() {
+    // If an org is already selected, sync active sector
+    const current = this.orgService.currentOrganisation();
+    if (current && current.type) {
+      const match = this.sectors.find(s => s.id === current.type || s.slug === current.slug);
+      if (match) {
+        this.activeSectorId.set(match.id);
+      }
+    }
+  }
+
+  sectors: IndustrySector[] = [
     {
       id: 'healthcare',
-      slug: 'metro-health-general-hospital',
+      slug: 'metro-health',
       icon: '🏥',
-      name: 'Healthcare',
-      subtitle: 'Hospitals & Clinics',
-      serviceLabel: 'Specialty / Clinic',
+      name: 'Healthcare & Clinical',
+      subtitle: 'Hospitals, triage, & diagnostics',
+      serviceLabel: 'Clinic / Department',
       tokenLabel: 'Patient Token',
       counterLabel: 'Consultation Room',
       staffLabel: 'Doctor / Nurse',
-      sampleService: 'General OPD & Triage',
+      sampleService: 'General Outpatient Clinic (OPD)',
       sampleWaiting: 8,
       sampleToken: 'DOC-012'
     },
     {
       id: 'banking',
-      slug: 'horizon-trust-bank',
+      slug: 'horizon-bank',
       icon: '🏦',
-      name: 'Banking & Finance',
-      subtitle: 'Branches & Credit Unions',
+      name: 'Banking & Financial',
+      subtitle: 'Retail branches & teller desks',
       serviceLabel: 'Counter Service',
       tokenLabel: 'Queue Token',
       counterLabel: 'Teller Window',
@@ -289,40 +308,46 @@ export class LandingComponent {
     },
     {
       id: 'government',
-      slug: 'state-citizen-services-center',
+      slug: 'citizen-services',
       icon: '🏛️',
-      name: 'Government',
-      subtitle: 'Passports & RTO',
+      name: 'Public & Government',
+      subtitle: 'Passports, RTO, & civic bureaus',
       serviceLabel: 'Citizen Counter',
       tokenLabel: 'Application Token',
-      counterLabel: 'Desk / Counter',
+      counterLabel: 'Service Window',
       staffLabel: 'Passport Officer',
-      sampleService: 'Passport Renewal & Bio',
+      sampleService: 'Passport Issuance & Renewal',
       sampleWaiting: 12,
       sampleToken: 'PASS-089'
     },
     {
       id: 'education',
-      slug: 'central-university-campus',
+      slug: 'central-univ',
       icon: '🎓',
-      name: 'Education',
-      subtitle: 'Universities & Colleges',
+      name: 'Higher Education',
+      subtitle: 'Campus administration & exams',
       serviceLabel: 'Campus Service',
       tokenLabel: 'Student Token',
-      counterLabel: 'Service Window',
+      counterLabel: 'Service Desk',
       staffLabel: 'Staff Operator',
-      sampleService: 'Fee Payment & Registrar',
+      sampleService: 'College Administration Office',
       sampleWaiting: 3,
-      sampleToken: 'FEE-007'
+      sampleToken: 'ADM-005'
     }
   ];
 
-  currentPreset = computed<IndustryPreset>(() => {
-    return this.industries.find(i => i.id === this.activeIndustry()) || this.industries[0];
+  currentSector = computed<IndustrySector>(() => {
+    return this.sectors.find(s => s.id === this.activeSectorId()) || this.sectors[0];
   });
 
-  selectIndustry(id: string) {
-    this.activeIndustry.set(id);
+  onSelectSector(sec: IndustrySector) {
+    this.activeSectorId.set(sec.id);
+    this.orgService.selectSector(sec.slug || sec.id);
+  }
+
+  openSectorWorkspace(sec: IndustrySector) {
+    this.onSelectSector(sec);
+    this.router.navigate(['/services']);
   }
 
   get demoResult() {
@@ -332,13 +357,5 @@ export class LandingComponent {
   onSliderChange(event: Event) {
     const val = Number((event.target as HTMLInputElement).value);
     this.simPeopleAhead.set(val);
-  }
-
-  applyIndustryDemo(slug: string) {
-    const org = this.orgService.organisations().find(o => o.slug === slug);
-    if (org) {
-      this.orgService.setOrganisation(org);
-    }
-    this.router.navigate(['/services']);
   }
 }
