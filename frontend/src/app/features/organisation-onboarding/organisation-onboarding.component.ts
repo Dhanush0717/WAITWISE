@@ -18,11 +18,9 @@ import { OrganisationType } from '../../core/models/organisation.model';
           <div class="flex items-center justify-between">
             <div *ngFor="let s of [1, 2, 3]; let i = index" class="flex items-center gap-2">
               <div
-                [class.bg-brand-600]="step() >= s"
-                [class.text-white]="step() >= s"
-                [class.bg-slate-100]="step() < s"
-                [class.dark:bg-slate-800]="step() < s"
-                [class.text-slate-500]="step() < s"
+                [ngClass]="step() >= s 
+                  ? 'bg-brand-600 text-white' 
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500'"
                 class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs">
                 {{ s }}
               </div>

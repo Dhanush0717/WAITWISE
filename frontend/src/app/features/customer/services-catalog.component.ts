@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -23,7 +23,7 @@ import { Service } from '../../core/models/service.model';
                 {{ orgService.currentOrganisation()?.type || 'Universal' }} Workspace
               </span>
               <span class="text-xs text-slate-400 font-medium">
-                {{ orgService.currentOrganisation()?.name }}
+                {{ orgService.currentOrganisation()?.name || 'All Organizations' }}
               </span>
             </div>
             <h1 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
@@ -64,24 +64,18 @@ import { Service } from '../../core/models/service.model';
           <div class="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
             <button
               (click)="selectedCategory.set('ALL')"
-              [class.bg-brand-600]="selectedCategory() === 'ALL'"
-              [class.text-white]="selectedCategory() === 'ALL'"
-              [class.bg-white]="selectedCategory() !== 'ALL'"
-              [class.dark:bg-slate-900]="selectedCategory() !== 'ALL'"
-              [class.text-slate-600]="selectedCategory() !== 'ALL'"
-              [class.dark:text-slate-300]="selectedCategory() !== 'ALL'"
+              [ngClass]="selectedCategory() === 'ALL'
+                ? 'bg-brand-600 text-white'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50'"
               class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold transition-colors whitespace-nowrap shadow-xs">
               All Categories
             </button>
             <button
               *ngFor="let cat of uniqueCategories()"
               (click)="selectedCategory.set(cat)"
-              [class.bg-brand-600]="selectedCategory() === cat"
-              [class.text-white]="selectedCategory() === cat"
-              [class.bg-white]="selectedCategory() !== cat"
-              [class.dark:bg-slate-900]="selectedCategory() !== cat"
-              [class.text-slate-600]="selectedCategory() !== cat"
-              [class.dark:text-slate-300]="selectedCategory() !== cat"
+              [ngClass]="selectedCategory() === cat
+                ? 'bg-brand-600 text-white'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50'"
               class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold transition-colors whitespace-nowrap shadow-xs capitalize">
               {{ cat }}
             </button>
@@ -186,14 +180,19 @@ export class ServicesCatalogComponent implements OnInit, OnDestroy {
 
   uniqueCategories = computed(() => {
     const set = new Set<string>();
-    this.services().forEach(s => {
-      if (s.category) set.add(s.category);
-    });
+    const list = this.services();
+    if (Array.isArray(list)) {
+      list.forEach(s => {
+        if (s.category) set.add(s.category);
+      });
+    }
     return Array.from(set);
   });
 
   filteredServices = computed(() => {
     let list = this.services();
+    if (!Array.isArray(list)) return [];
+
     const cat = this.selectedCategory();
     const query = this.searchQuery.toLowerCase().trim();
 
@@ -211,6 +210,14 @@ export class ServicesCatalogComponent implements OnInit, OnDestroy {
     return list;
   });
 
+  constructor() {
+    // Automatically re-fetch whenever the active organization updates
+    effect(() => {
+      const org = this.orgService.currentOrganisation();
+      this.loadCatalog(org?._id);
+    });
+  }
+
   ngOnInit() {
     this.loadCatalog();
 
@@ -219,7 +226,7 @@ export class ServicesCatalogComponent implements OnInit, OnDestroy {
       this.socketService.queueUpdated$.subscribe((data) => {
         if (data && data.serviceId) {
           this.services.update(list =>
-            list.map(s => {
+            Array.isArray(list) ? list.map(s => {
               const sid = s._id || (s as any).id;
               if (sid === data.serviceId) {
                 return {
@@ -229,17 +236,20 @@ export class ServicesCatalogComponent implements OnInit, OnDestroy {
                 };
               }
               return s;
-            })
+            }) : []
           );
         }
       })
     );
   }
 
-  loadCatalog() {
-    const orgId = this.orgService.currentOrganisation()?._id;
-    this.queueService.getServices(orgId ? { organisationId: orgId } : undefined).subscribe({
-      next: (data) => this.services.set(data || [])
+  loadCatalog(orgId?: string) {
+    const id = orgId || this.orgService.currentOrganisation()?._id;
+    this.queueService.getServices(id ? { organisationId: id } : undefined).subscribe({
+      next: (data) => {
+        const list = Array.isArray(data) ? data : (data as any)?.data || [];
+        this.services.set(list);
+      }
     });
   }
 

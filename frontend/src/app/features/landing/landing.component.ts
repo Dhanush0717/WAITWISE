@@ -1,9 +1,24 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { OrganisationService } from '../../core/services/organisation.service';
 import { AuthService } from '../../core/services/auth.service';
 import { GeolocationService } from '../../core/services/geolocation.service';
+
+export interface IndustryPreset {
+  id: string;
+  slug: string;
+  icon: string;
+  name: string;
+  subtitle: string;
+  serviceLabel: string;
+  tokenLabel: string;
+  counterLabel: string;
+  staffLabel: string;
+  sampleService: string;
+  sampleWaiting: number;
+  sampleToken: string;
+}
 
 @Component({
   selector: 'app-landing',
@@ -67,27 +82,27 @@ import { GeolocationService } from '../../core/services/geolocation.service';
             </div>
 
             <!-- Industry Selector Tabs -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-4">
-              <button
-                *ngFor="let ind of industries"
-                (click)="activeIndustry.set(ind.id)"
-                [class.bg-brand-50]="activeIndustry() === ind.id"
-                [class.border-brand-500]="activeIndustry() === ind.id"
-                [class.text-brand-700]="activeIndustry() === ind.id"
-                [class.dark:bg-brand-950]="activeIndustry() === ind.id"
-                [class.dark:text-brand-300]="activeIndustry() === ind.id"
-                class="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-left transition-all hover:border-slate-300 dark:hover:border-slate-700">
-                <div class="text-2xl mb-1">{{ ind.icon }}</div>
-                <div class="font-bold text-xs text-slate-900 dark:text-white">{{ ind.name }}</div>
-                <div class="text-[10px] text-slate-500">{{ ind.subtitle }}</div>
-              </button>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-5">
+              @for (ind of industries; track ind.id) {
+                <button
+                  type="button"
+                  (click)="selectIndustry(ind.id)"
+                  [ngClass]="activeIndustry() === ind.id 
+                    ? 'bg-brand-50 border-brand-500 text-brand-700 dark:bg-brand-950 dark:text-brand-300 shadow-md ring-2 ring-brand-500/20' 
+                    : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'"
+                  class="p-4 rounded-2xl border-2 text-left transition-all cursor-pointer">
+                  <div class="text-3xl mb-1.5">{{ ind.icon }}</div>
+                  <div class="font-black text-sm text-slate-900 dark:text-white">{{ ind.name }}</div>
+                  <div class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ ind.subtitle }}</div>
+                </button>
+              }
             </div>
 
             <!-- Preview Card for Selected Industry -->
-            <div class="mt-5 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="mt-6 p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700 grid grid-cols-1 md:grid-cols-3 gap-5">
               <div>
-                <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Configured Terminology</span>
-                <div class="mt-1 space-y-1 text-xs">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Configured Terminology</span>
+                <div class="mt-2 space-y-1.5 text-xs">
                   <div class="flex justify-between"><span class="text-slate-500">Service Label:</span> <strong class="text-slate-900 dark:text-white">{{ currentPreset().serviceLabel }}</strong></div>
                   <div class="flex justify-between"><span class="text-slate-500">Token Label:</span> <strong class="text-slate-900 dark:text-white">{{ currentPreset().tokenLabel }}</strong></div>
                   <div class="flex justify-between"><span class="text-slate-500">Counter Label:</span> <strong class="text-slate-900 dark:text-white">{{ currentPreset().counterLabel }}</strong></div>
@@ -96,22 +111,23 @@ import { GeolocationService } from '../../core/services/geolocation.service';
               </div>
 
               <div>
-                <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Example Active Department</span>
-                <div class="mt-1 p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Example Active Department</span>
+                <div class="mt-2 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs">
                   <div class="font-bold text-slate-900 dark:text-white flex items-center justify-between">
                     <span>{{ currentPreset().sampleService }}</span>
-                    <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold">Active</span>
+                    <span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-[10px] font-bold">Active</span>
                   </div>
-                  <div class="text-[11px] text-slate-500 mt-1">
-                    Waiting: <strong>{{ currentPreset().sampleWaiting }}</strong> &bull; Serving: <strong>{{ currentPreset().sampleToken }}</strong>
+                  <div class="text-[11px] text-slate-500 mt-2">
+                    Waiting: <strong class="text-slate-900 dark:text-white">{{ currentPreset().sampleWaiting }}</strong> &bull; Serving: <strong class="text-brand-600">{{ currentPreset().sampleToken }}</strong>
                   </div>
                 </div>
               </div>
 
               <div class="flex flex-col justify-center">
                 <button
+                  type="button"
                   (click)="applyIndustryDemo(currentPreset().slug)"
-                  class="w-full py-2.5 px-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-sm transition-all text-center">
+                  class="w-full py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/20 transition-all text-center">
                   Launch {{ currentPreset().name }} Workspace &rarr;
                 </button>
               </div>
@@ -242,7 +258,7 @@ export class LandingComponent {
   activeIndustry = signal<string>('healthcare');
   simPeopleAhead = signal<number>(4);
 
-  industries = [
+  industries: IndustryPreset[] = [
     {
       id: 'healthcare',
       slug: 'metro-health-general-hospital',
@@ -301,8 +317,12 @@ export class LandingComponent {
     }
   ];
 
-  currentPreset() {
+  currentPreset = computed<IndustryPreset>(() => {
     return this.industries.find(i => i.id === this.activeIndustry()) || this.industries[0];
+  });
+
+  selectIndustry(id: string) {
+    this.activeIndustry.set(id);
   }
 
   get demoResult() {

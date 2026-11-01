@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, map } from 'rxjs';
 import { ApiService } from './api.service';
 import { Organisation, OrganisationTerminology } from '../models/organisation.model';
 import { Branch } from '../models/branch.model';
@@ -45,14 +45,15 @@ export class OrganisationService {
 
   loadOrganisations(): Observable<Organisation[]> {
     this.isLoading.set(true);
-    return this.api.get<Organisation[]>('/organisations').pipe(
-      tap(orgs => {
+    return this.api.get<any>('/organisations').pipe(
+      map(res => (res && res.data) ? res.data : (Array.isArray(res) ? res : [])),
+      tap((orgs: Organisation[]) => {
         this.isLoading.set(false);
         this.organisations.set(orgs || []);
         
         // Restore last chosen org from local storage, or default to first
         const savedOrgId = localStorage.getItem('waitwise_active_org_id');
-        if (savedOrgId && orgs) {
+        if (savedOrgId && orgs && orgs.length > 0) {
           const found = orgs.find(o => o._id === savedOrgId || (o as any).id === savedOrgId);
           if (found) {
             this.setOrganisation(found);
@@ -74,13 +75,15 @@ export class OrganisationService {
   }
 
   loadBranches(orgId: string): Observable<Branch[]> {
-    return this.api.get<Branch[]>(`/organisations/${orgId}/branches`).pipe(
+    return this.api.get<any>(`/organisations/${orgId}/branches`).pipe(
+      map(res => (res && res.data) ? res.data : (Array.isArray(res) ? res : [])),
       tap(branches => this.branches.set(branches || []))
     );
   }
 
   createOrganisation(data: any): Observable<Organisation> {
-    return this.api.post<Organisation>('/organisations', data).pipe(
+    return this.api.post<any>('/organisations', data).pipe(
+      map(res => (res && res.data) ? res.data : res),
       tap(newOrg => {
         this.organisations.update(list => [...list, newOrg]);
         this.setOrganisation(newOrg);
@@ -89,7 +92,8 @@ export class OrganisationService {
   }
 
   createBranch(orgId: string, data: any): Observable<Branch> {
-    return this.api.post<Branch>(`/organisations/${orgId}/branches`, data).pipe(
+    return this.api.post<any>(`/organisations/${orgId}/branches`, data).pipe(
+      map(res => (res && res.data) ? res.data : res),
       tap(newBranch => {
         this.branches.update(list => [...list, newBranch]);
       })

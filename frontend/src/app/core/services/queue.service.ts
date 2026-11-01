@@ -44,11 +44,14 @@ export class QueueService {
   }
 
   getServices(params?: any): Observable<Service[]> {
-    return this.api.get<Service[]>('/services', params);
+    return this.api.get<any>('/services', params).pipe(
+      map(res => (res && res.data) ? res.data : (Array.isArray(res) ? res : []))
+    );
   }
 
   getServiceById(id: string): Observable<Service> {
-    return this.api.get<Service>(`/services/${id}`).pipe(
+    return this.api.get<any>(`/services/${id}`).pipe(
+      map(res => (res && res.data) ? res.data : res),
       tap(svc => this.currentService.set(svc))
     );
   }
@@ -82,7 +85,8 @@ export class QueueService {
   }
 
   getTicketStatus(ticketId: string): Observable<Ticket> {
-    return this.api.get<Ticket>(`/queue/ticket/${ticketId}`).pipe(
+    return this.api.get<any>(`/queue/ticket/${ticketId}`).pipe(
+      map(res => (res && res.data) ? res.data : res),
       tap(ticket => {
         if (this.activeTicket() && (this.activeTicket()?._id === ticket._id || (this.activeTicket() as any)?.id === ticket._id)) {
           this.setActiveTicket(ticket);
@@ -115,7 +119,9 @@ export class QueueService {
   }
 
   getLiveQueue(serviceId: string): Observable<any> {
-    return this.api.get(`/queue/live/${serviceId}`);
+    return this.api.get<any>(`/queue/live/${serviceId}`).pipe(
+      map(res => (res && res.data) ? res.data : res)
+    );
   }
 
   setActiveTicket(ticket: Ticket | null) {
