@@ -1,0 +1,98 @@
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { Observable, tap } from 'rxjs';
+import { ApiService } from './api.service';
+import { Organisation, OrganisationTerminology } from '../models/organisation.model';
+import { Branch } from '../models/branch.model';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class OrganisationService {
+  private api = inject(ApiService);
+
+  organisations = signal<Organisation[]>([]);
+  currentOrganisation = signal<Organisation | null>(null);
+  branches = signal<Branch[]>([]);
+  isLoading = signal<boolean>(false);
+
+  // Dynamic Multi-Industry Terminology Computeds
+  terminology = computed<OrganisationTerminology>(() => {
+    const org = this.currentOrganisation();
+    return org?.terminology || {
+      serviceLabel: 'Service',
+      branchLabel: 'Branch / Facility',
+      tokenLabel: 'Token',
+      customerLabel: 'Visitor / Customer',
+      staffLabel: 'Staff / Operator',
+      counterLabel: 'Counter / Desk'
+    };
+  });
+
+  serviceLabel = computed(() => this.terminology().serviceLabel);
+  branchLabel = computed(() => this.terminology().branchLabel);
+  tokenLabel = computed(() => this.terminology().tokenLabel);
+  customerLabel = computed(() => this.terminology().customerLabel);
+  staffLabel = computed(() => this.terminology().staffLabel);
+  counterLabel = computed(() => this.terminology().counterLabel);
+
+  constructor() {
+    this.initOrganisation();
+  }
+
+  private initOrganisation() {
+    this.loadOrganisations().subscribe();
+  }
+
+  loadOrganisations(): Observable<Organisation[]> {
+    this.isLoading.set(true);
+    return this.api.get<Organisation[]>('/organisations').pipe(
+      tap(orgs => {
+        this.isLoading.set(false);
+        this.organisations.set(orgs || []);
+        
+        // Restore last chosen org from local storage, or default to first
+        const savedOrgId = localStorage.getItem('waitwise_active_org_id');
+        if (savedOrgId && orgs) {
+          const found = orgs.find(o => o._id === savedOrgId || (o as any).id === savedOrgId);
+          if (found) {
+            this.setOrganisation(found);
+            return;
+          }
+        }
+        if (orgs && orgs.length > 0 && !this.currentOrganisation()) {
+          this.setOrganisation(orgs[0]);
+        }
+      })
+    );
+  }
+
+  setOrganisation(org: Organisation) {
+    this.currentOrganisation.set(org);
+    const id = org._id || (org as any).id;
+    localStorage.setItem('waitwise_active_org_id', id);
+    this.loadBranches(id).subscribe();
+  }
+
+  loadBranches(orgId: string): Observable<Branch[]> {
+    return this.api.get<Branch[]>(`/organisations/${orgId}/branches`).pipe(
+      tap(branches => this.branches.set(branches || []))
+    );
+  }
+
+  createOrganisation(data: any): Observable<Organisation> {
+    return this.api.post<Organisation>('/organisations', data).pipe(
+      tap(newOrg => {
+        this.organisations.update(list => [...list, newOrg]);
+        this.setOrganisation(newOrg);
+      })
+    );
+  }
+
+  createBranch(orgId: string, data: any): Observable<Branch> {
+    return this.api.post<Branch>(`/organisations/${orgId}/branches`, data).pipe(
+      tap(newBranch => {
+        this.branches.update(list => [...list, newBranch]);
+      })
+    );
+  }
+}

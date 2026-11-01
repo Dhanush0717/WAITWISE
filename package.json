@@ -1,7 +1,7 @@
 {
   "name": "waitwise-workspace",
-  "version": "1.0.0",
-  "description": "WAITWISE - Real-Time Intelligent Campus Queue & Crowd Management System",
+  "version": "2.0.0",
+  "description": "WAITWISE – Universal Smart Queue & Crowd Management Platform (Angular 18, Node.js, Express, MongoDB, Socket.IO)",
   "private": true,
   "scripts": {
     "start": "concurrently \"npm run backend\" \"npm run frontend\"",

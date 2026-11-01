@@ -8,13 +8,15 @@ const { logAction } = require('../utils/auditLogger');
 const { v4: uuidv4 } = require('uuid');
 
 // Helper to get or create active queue session for today
-const getOrCreateTodaySession = async (serviceId) => {
+const getOrCreateTodaySession = async (service) => {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-  let session = await QueueSession.findOne({ serviceId, sessionDate: today });
+  let session = await QueueSession.findOne({ serviceId: service._id, sessionDate: today });
 
   if (!session) {
     session = await QueueSession.create({
-      serviceId,
+      organisationId: service.organisationId,
+      branchId: service.branchId,
+      serviceId: service._id,
       sessionDate: today,
       tokenSequence: 0,
       status: 'active',
@@ -25,7 +27,6 @@ const getOrCreateTodaySession = async (serviceId) => {
 
 // Helper: atomic sequential token generation
 const generateNextToken = async (service, session) => {
-  // Use findOneAndUpdate with $inc for atomic thread-safe token generation
   const updatedSession = await QueueSession.findOneAndUpdate(
     { _id: session._id },
     { $inc: { tokenSequence: 1, totalTokensIssued: 1 } },
@@ -33,7 +34,6 @@ const generateNextToken = async (service, session) => {
   );
 
   const seq = updatedSession.tokenSequence;
-  // Format token: e.g. ADM-001, LIB-023
   const formattedSeq = String(seq).padStart(3, '0');
   const ticketNumber = `${service.code}-${formattedSeq}`;
 
@@ -51,7 +51,7 @@ const joinQueue = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'serviceId is required' });
     }
 
-    const service = await Service.findById(serviceId);
+    const service = await Service.findById(serviceId).populate('organisationId');
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
@@ -79,7 +79,7 @@ const joinQueue = async (req, res, next) => {
     if (activeWaitingCount >= service.maxQueueCapacity) {
       return res.status(400).json({
         success: false,
-        message: `Queue limit reached (${service.maxQueueCapacity} customers). Please try again shortly.`,
+        message: `Queue capacity limit reached (${service.maxQueueCapacity} people). Please try again shortly.`,
       });
     }
 
@@ -102,7 +102,7 @@ const joinQueue = async (req, res, next) => {
       }
     }
 
-    const session = await getOrCreateTodaySession(service._id);
+    const session = await getOrCreateTodaySession(service);
     const { ticketNumber, sequenceNumber } = await generateNextToken(service, session);
 
     const guestAccessToken = !userId ? uuidv4() : null;
@@ -116,6 +116,8 @@ const joinQueue = async (req, res, next) => {
     const ticket = await Ticket.create({
       ticketNumber,
       sequenceNumber,
+      organisationId: service.organisationId ? service.organisationId._id : null,
+      branchId: service.branchId,
       serviceId: service._id,
       queueSessionId: session._id,
       userId,
@@ -128,6 +130,7 @@ const joinQueue = async (req, res, next) => {
 
     // Create confirmation in-app notification
     await Notification.create({
+      organisationId: service.organisationId ? service.organisationId._id : null,
       recipient: userId,
       guestToken: guestAccessToken,
       ticketId: ticket._id,
@@ -144,11 +147,13 @@ const joinQueue = async (req, res, next) => {
       ticketNumber: ticket.ticketNumber,
       sequenceNumber: ticket.sequenceNumber,
       serviceId: service._id,
+      organisationId: service.organisationId ? service.organisationId._id : null,
       activeWaitingCount: activeWaitingCount + 1,
     });
 
     emitToService(service._id, 'queueUpdated', {
       serviceId: service._id,
+      organisationId: service.organisationId ? service.organisationId._id : null,
       waitingCount: activeWaitingCount + 1,
     });
 
@@ -157,6 +162,7 @@ const joinQueue = async (req, res, next) => {
       emitToAdmin('overload_alert', {
         serviceId: service._id,
         serviceName: service.name,
+        organisationId: service.organisationId ? service.organisationId._id : null,
         waitingCount: activeWaitingCount + 1,
         threshold: service.overflowThreshold,
         recommendation: 'Recommend opening an additional counter to alleviate queue pressure.',
@@ -164,6 +170,8 @@ const joinQueue = async (req, res, next) => {
     }
 
     await logAction({
+      organisationId: service.organisationId ? service.organisationId._id : null,
+      branchId: service.branchId,
       actorId: userId,
       actorName: finalCustomerName,
       actorRole: req.user ? req.user.role : 'guest',
@@ -200,7 +208,7 @@ const kioskJoin = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'serviceId is required' });
     }
 
-    const service = await Service.findById(serviceId);
+    const service = await Service.findById(serviceId).populate('organisationId');
     if (!service || service.status !== 'active') {
       return res.status(400).json({
         success: false,
@@ -208,7 +216,7 @@ const kioskJoin = async (req, res, next) => {
       });
     }
 
-    const session = await getOrCreateTodaySession(service._id);
+    const session = await getOrCreateTodaySession(service);
     const { ticketNumber, sequenceNumber } = await generateNextToken(service, session);
 
     const guestAccessToken = uuidv4();
@@ -220,6 +228,8 @@ const kioskJoin = async (req, res, next) => {
     const ticket = await Ticket.create({
       ticketNumber,
       sequenceNumber,
+      organisationId: service.organisationId ? service.organisationId._id : null,
+      branchId: service.branchId,
       serviceId: service._id,
       queueSessionId: session._id,
       userId: null,
@@ -236,15 +246,19 @@ const kioskJoin = async (req, res, next) => {
       ticketNumber: ticket.ticketNumber,
       sequenceNumber: ticket.sequenceNumber,
       serviceId: service._id,
+      organisationId: service.organisationId ? service.organisationId._id : null,
       activeWaitingCount: activeWaitingCount + 1,
     });
 
     emitToService(service._id, 'queueUpdated', {
       serviceId: service._id,
+      organisationId: service.organisationId ? service.organisationId._id : null,
       waitingCount: activeWaitingCount + 1,
     });
 
     await logAction({
+      organisationId: service.organisationId ? service.organisationId._id : null,
+      branchId: service.branchId,
       actorName: 'Kiosk Terminal',
       actorRole: 'kiosk',
       action: 'KIOSK_TICKET_ISSUED',
@@ -261,7 +275,7 @@ const kioskJoin = async (req, res, next) => {
         position: activeWaitingCount + 1,
         peopleAhead: activeWaitingCount,
         estimatedWaitMinutes: waitInfo.estimatedWaitMinutes,
-        trackingUrl: `${process.env.CLIENT_URL || 'http://localhost:5173'}/tickets/guest/${guestAccessToken}`,
+        trackingUrl: `${process.env.CLIENT_URL || 'http://localhost:4200'}/tickets/${ticket._id}?guestToken=${guestAccessToken}`,
       },
     });
   } catch (error) {
@@ -271,7 +285,7 @@ const kioskJoin = async (req, res, next) => {
 
 // @desc    Staff-assisted token issuance for walk-in visitors without smartphones
 // @route   POST /api/queues/staff-issue
-// @access  Private (Staff or Admin)
+// @access  Private (Staff, Branch Manager, Org Admin, Super Admin)
 const staffIssueToken = async (req, res, next) => {
   try {
     const { serviceId, customerName, customerIdentifier, notes } = req.body;
@@ -281,12 +295,12 @@ const staffIssueToken = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Target serviceId is required' });
     }
 
-    const service = await Service.findById(targetServiceId);
+    const service = await Service.findById(targetServiceId).populate('organisationId');
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
 
-    const session = await getOrCreateTodaySession(service._id);
+    const session = await getOrCreateTodaySession(service);
     const { ticketNumber, sequenceNumber } = await generateNextToken(service, session);
 
     const guestAccessToken = uuidv4();
@@ -298,6 +312,8 @@ const staffIssueToken = async (req, res, next) => {
     const ticket = await Ticket.create({
       ticketNumber,
       sequenceNumber,
+      organisationId: service.organisationId ? service.organisationId._id : null,
+      branchId: service.branchId,
       serviceId: service._id,
       queueSessionId: session._id,
       userId: null,
@@ -314,15 +330,19 @@ const staffIssueToken = async (req, res, next) => {
       ticketNumber: ticket.ticketNumber,
       sequenceNumber: ticket.sequenceNumber,
       serviceId: service._id,
+      organisationId: service.organisationId ? service.organisationId._id : null,
       activeWaitingCount: activeWaitingCount + 1,
     });
 
     emitToService(service._id, 'queueUpdated', {
       serviceId: service._id,
+      organisationId: service.organisationId ? service.organisationId._id : null,
       waitingCount: activeWaitingCount + 1,
     });
 
     await logAction({
+      organisationId: service.organisationId ? service.organisationId._id : null,
+      branchId: service.branchId,
       actorId: req.user._id,
       actorName: req.user.name,
       actorRole: req.user.role,
@@ -356,13 +376,15 @@ const getTicketStatus = async (req, res, next) => {
     const { guestToken } = req.query;
 
     let query = { _id: id };
-    // If querying with guestToken
     if (guestToken) {
       query = { guestAccessToken: guestToken };
     }
 
     const ticket = await Ticket.findOne(query)
-      .populate('serviceId')
+      .populate({
+        path: 'serviceId',
+        populate: [{ path: 'organisationId' }, { path: 'branchId' }],
+      })
       .populate('assignedCounter', 'counterNumber name status')
       .populate('servedBy', 'name email');
 
@@ -370,7 +392,6 @@ const getTicketStatus = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Ticket not found' });
     }
 
-    // Calculate dynamic position & people ahead
     let peopleAhead = 0;
     let queuePosition = 1;
 
@@ -383,7 +404,6 @@ const getTicketStatus = async (req, res, next) => {
       queuePosition = peopleAhead + 1;
     }
 
-    // Get currently serving ticket for this service
     const currentlyServing = await Ticket.findOne({
       serviceId: ticket.serviceId._id,
       status: 'SERVING',
@@ -435,10 +455,9 @@ const cancelTicket = async (req, res, next) => {
       });
     }
 
-    // Check ownership
     const isUserOwner = req.user && ticket.userId && String(req.user._id) === String(ticket.userId);
     const isGuestOwner = guestToken && ticket.guestAccessToken === guestToken;
-    const isStaffOrAdmin = req.user && ['staff', 'admin'].includes(req.user.role);
+    const isStaffOrAdmin = req.user && ['staff', 'branch_manager', 'org_admin', 'admin', 'super_admin'].includes(req.user.role);
 
     if (!isUserOwner && !isGuestOwner && !isStaffOrAdmin) {
       return res.status(403).json({
@@ -448,10 +467,9 @@ const cancelTicket = async (req, res, next) => {
     }
 
     ticket.status = 'CANCELLED';
-    ticket.skipReason = reason || 'Cancelled by user';
+    ticket.skipReason = reason || 'Cancelled by visitor';
     await ticket.save();
 
-    // Recalculate remaining waiting count
     const remainingWaiting = await Ticket.countDocuments({
       serviceId: ticket.serviceId._id,
       status: 'WAITING',
@@ -474,6 +492,8 @@ const cancelTicket = async (req, res, next) => {
     });
 
     await logAction({
+      organisationId: ticket.organisationId,
+      branchId: ticket.branchId,
       actorId: req.user ? req.user._id : null,
       actorName: req.user ? req.user.name : ticket.customerName,
       actorRole: req.user ? req.user.role : 'guest',
@@ -499,7 +519,7 @@ const cancelTicket = async (req, res, next) => {
 const getLiveQueue = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const service = await Service.findById(id);
+    const service = await Service.findById(id).populate('organisationId');
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
@@ -530,6 +550,7 @@ const getLiveQueue = async (req, res, next) => {
         serviceId: service._id,
         serviceName: service.name,
         serviceStatus: service.status,
+        organisation: service.organisationId,
         counts: {
           waiting: waitingTickets.length,
           called: calledTickets.length,
@@ -552,7 +573,7 @@ const getLiveQueue = async (req, res, next) => {
   }
 };
 
-// @desc    Get user's ticket history (previous and current tickets)
+// @desc    Get user's ticket history
 // @route   GET /api/queues/my-history
 // @access  Private
 const getMyTicketHistory = async (req, res, next) => {

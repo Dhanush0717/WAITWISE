@@ -2,6 +2,18 @@ const mongoose = require('mongoose');
 
 const counterSchema = new mongoose.Schema(
   {
+    organisationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Organisation',
+      default: null,
+      index: true,
+    },
+    branchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Branch',
+      default: null,
+      index: true,
+    },
     serviceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Service',
@@ -42,7 +54,7 @@ const counterSchema = new mongoose.Schema(
   }
 );
 
-// Ensure counterNumber is unique per service
 counterSchema.index({ serviceId: 1, counterNumber: 1 }, { unique: true });
+counterSchema.index({ organisationId: 1, branchId: 1 });
 
 module.exports = mongoose.model('Counter', counterSchema);

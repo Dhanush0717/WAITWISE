@@ -1,0 +1,134 @@
+import { Injectable, signal, inject } from '@angular/core';
+import { Observable, tap, map, of } from 'rxjs';
+import { ApiService } from './api.service';
+import { Service } from '../models/service.model';
+import { Ticket } from '../models/ticket.model';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class QueueService {
+  private api = inject(ApiService);
+
+  activeTicket = signal<Ticket | null>(null);
+  currentService = signal<Service | null>(null);
+
+  constructor() {
+    this.restoreActiveTicket();
+  }
+
+  private restoreActiveTicket() {
+    const saved = localStorage.getItem('waitwise_active_ticket');
+    if (saved) {
+      try {
+        const ticket: Ticket = JSON.parse(saved);
+        this.activeTicket.set(ticket);
+        // Refresh ticket status
+        if (ticket._id || (ticket as any).id) {
+          const tid = ticket._id || (ticket as any).id;
+          this.getTicketStatus(tid).subscribe({
+            next: (refreshed) => {
+              if (refreshed && ['WAITING', 'CALLED', 'SERVING'].includes(refreshed.status)) {
+                this.setActiveTicket(refreshed);
+              } else {
+                this.clearActiveTicket();
+              }
+            },
+            error: () => this.clearActiveTicket()
+          });
+        }
+      } catch (e) {
+        this.clearActiveTicket();
+      }
+    }
+  }
+
+  getServices(params?: any): Observable<Service[]> {
+    return this.api.get<Service[]>('/services', params);
+  }
+
+  getServiceById(id: string): Observable<Service> {
+    return this.api.get<Service>(`/services/${id}`).pipe(
+      tap(svc => this.currentService.set(svc))
+    );
+  }
+
+  joinQueue(serviceId: string, priority: string = 'REGULAR', notes: string = ''): Observable<{ success: boolean; ticket: Ticket }> {
+    return this.api.post<{ success: boolean; ticket: Ticket }>('/queue/join', {
+      serviceId,
+      priority,
+      notes
+    }).pipe(
+      tap(res => {
+        if (res && res.ticket) {
+          this.setActiveTicket(res.ticket);
+        }
+      })
+    );
+  }
+
+  kioskJoin(payload: { serviceId: string; guestInfo: { name: string; phone?: string; identifier?: string }; priority?: string }): Observable<{ success: boolean; ticket: Ticket }> {
+    return this.api.post<{ success: boolean; ticket: Ticket }>('/queue/kiosk-join', payload).pipe(
+      tap(res => {
+        if (res && res.ticket) {
+          this.setActiveTicket(res.ticket);
+        }
+      })
+    );
+  }
+
+  staffIssueToken(payload: { serviceId: string; guestInfo: { name: string; phone?: string }; priority?: string; notes?: string }): Observable<{ success: boolean; ticket: Ticket }> {
+    return this.api.post<{ success: boolean; ticket: Ticket }>('/queue/staff-issue', payload);
+  }
+
+  getTicketStatus(ticketId: string): Observable<Ticket> {
+    return this.api.get<Ticket>(`/queue/ticket/${ticketId}`).pipe(
+      tap(ticket => {
+        if (this.activeTicket() && (this.activeTicket()?._id === ticket._id || (this.activeTicket() as any)?.id === ticket._id)) {
+          this.setActiveTicket(ticket);
+        }
+      })
+    );
+  }
+
+  getMyActiveTicket(): Observable<Ticket | null> {
+    return this.api.get<{ success: boolean; ticket: Ticket }>('/queue/my-active').pipe(
+      tap(res => {
+        if (res && res.ticket) {
+          this.setActiveTicket(res.ticket);
+        } else {
+          this.clearActiveTicket();
+        }
+      }),
+      map(res => res?.ticket || null)
+    );
+  }
+
+  cancelTicket(ticketId: string, reason?: string): Observable<any> {
+    return this.api.post(`/queue/cancel/${ticketId}`, { reason }).pipe(
+      tap(() => {
+        if (this.activeTicket()?._id === ticketId || (this.activeTicket() as any)?.id === ticketId) {
+          this.clearActiveTicket();
+        }
+      })
+    );
+  }
+
+  getLiveQueue(serviceId: string): Observable<any> {
+    return this.api.get(`/queue/live/${serviceId}`);
+  }
+
+  setActiveTicket(ticket: Ticket | null) {
+    this.activeTicket.set(ticket);
+    if (ticket) {
+      localStorage.setItem('waitwise_active_ticket', JSON.stringify(ticket));
+    } else {
+      localStorage.removeItem('waitwise_active_ticket');
+    }
+  }
+
+  clearActiveTicket() {
+    this.activeTicket.set(null);
+    localStorage.removeItem('waitwise_active_ticket');
+  }
+}

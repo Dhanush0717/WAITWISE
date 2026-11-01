@@ -2,6 +2,18 @@ const mongoose = require('mongoose');
 
 const auditLogSchema = new mongoose.Schema(
   {
+    organisationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Organisation',
+      default: null,
+      index: true,
+    },
+    branchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Branch',
+      default: null,
+      index: true,
+    },
     actorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -40,5 +52,6 @@ const auditLogSchema = new mongoose.Schema(
 );
 
 auditLogSchema.index({ createdAt: -1 });
+auditLogSchema.index({ organisationId: 1, createdAt: -1 });
 
 module.exports = mongoose.model('AuditLog', auditLogSchema);

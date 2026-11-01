@@ -2,6 +2,18 @@ const mongoose = require('mongoose');
 
 const serviceSchema = new mongoose.Schema(
   {
+    organisationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Organisation',
+      default: null,
+      index: true,
+    },
+    branchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Branch',
+      default: null,
+      index: true,
+    },
     name: {
       type: String,
       required: [true, 'Please provide service name'],
@@ -10,11 +22,10 @@ const serviceSchema = new mongoose.Schema(
     },
     code: {
       type: String,
-      required: [true, 'Please provide service code (e.g. ADM, LIB)'],
-      unique: true,
+      required: [true, 'Please provide service code (e.g. OPD, ACC, EXM, REG)'],
       uppercase: true,
       trim: true,
-      maxlength: 6,
+      maxlength: 10,
     },
     description: {
       type: String,
@@ -23,17 +34,17 @@ const serviceSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['administration', 'academic', 'dining', 'library', 'health', 'finance', 'facility', 'other'],
-      default: 'administration',
+      trim: true,
+      default: 'General',
     },
     location: {
       building: {
         type: String,
-        default: 'Main Administration Block',
+        default: 'Main Facility',
       },
       room: {
         type: String,
-        default: 'Ground Floor, Room 101',
+        default: 'Counter Hall 1',
       },
       coordinates: {
         lat: { type: Number, default: 28.545 },
@@ -43,7 +54,7 @@ const serviceSchema = new mongoose.Schema(
     operatingHours: {
       open: { type: String, default: '09:00' },
       close: { type: String, default: '17:00' },
-      days: { type: [Number], default: [1, 2, 3, 4, 5] }, // 1=Mon, 5=Fri
+      days: { type: [Number], default: [1, 2, 3, 4, 5] },
     },
     status: {
       type: String,
@@ -54,7 +65,7 @@ const serviceSchema = new mongoose.Schema(
       type: Number,
       default: 5,
       min: 1,
-      max: 120,
+      max: 180,
     },
     maxQueueCapacity: {
       type: Number,
@@ -83,5 +94,8 @@ const serviceSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+serviceSchema.index({ organisationId: 1, code: 1 });
+serviceSchema.index({ organisationId: 1, branchId: 1 });
 
 module.exports = mongoose.model('Service', serviceSchema);

@@ -78,7 +78,9 @@ const optionalAuth = async (req, res, next) => {
   next();
 };
 
-// Grant access to specific roles
+// Role-Based Authorization
+// Hierarchy & Aliases:
+// super_admin > org_admin (admin) > branch_manager > staff > customer (student)
 const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -88,14 +90,55 @@ const authorize = (...roles) => {
       });
     }
 
-    if (!roles.includes(req.user.role)) {
+    const userRole = req.user.role;
+
+    // Super admin can access all org-level routes
+    if (userRole === 'super_admin') {
+      return next();
+    }
+
+    // Role equivalencies:
+    const effectiveRoles = [userRole];
+    if (userRole === 'admin') effectiveRoles.push('org_admin');
+    if (userRole === 'org_admin') effectiveRoles.push('admin', 'branch_manager', 'staff');
+    if (userRole === 'branch_manager') effectiveRoles.push('staff');
+    if (userRole === 'student') effectiveRoles.push('customer');
+
+    const hasPermission = roles.some((r) => effectiveRoles.includes(r));
+
+    if (!hasPermission) {
       return res.status(403).json({
         success: false,
-        message: `User role '${req.user.role}' is not authorized to access this route`,
+        message: `User role '${userRole}' is not authorized to access this route`,
       });
     }
     next();
   };
 };
 
-module.exports = { protect, optionalAuth, authorize };
+// Tenant isolation verification: ensures user only accesses resources belonging to their organization
+const requireTenant = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Authentication required' });
+  }
+
+  // Super admin can access across tenants
+  if (req.user.role === 'super_admin') {
+    return next();
+  }
+
+  const userOrgId = req.user.organisationId ? String(req.user.organisationId) : null;
+  const targetOrgId = req.params.orgId || req.body.organisationId || req.query.organisationId || req.headers['x-organisation-id'];
+
+  if (targetOrgId && userOrgId && String(targetOrgId) !== userOrgId) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied: Cannot access or modify data belonging to another organisation',
+    });
+  }
+
+  req.tenantId = userOrgId;
+  next();
+};
+
+module.exports = { protect, optionalAuth, authorize, requireTenant };

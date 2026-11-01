@@ -28,13 +28,34 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['student', 'staff', 'admin'],
-      default: 'student',
+      enum: [
+        'super_admin',     // Platform-wide management
+        'org_admin',       // Organisation-level admin
+        'branch_manager',  // Branch-level manager
+        'staff',           // Service desk / counter operator
+        'customer',        // Visitor / customer / patient / student
+        // Backward-compatibility aliases
+        'admin',
+        'student',
+      ],
+      default: 'customer',
+    },
+    organisationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Organisation',
+      default: null,
+      index: true,
+    },
+    branchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Branch',
+      default: null,
+      index: true,
     },
     identifier: {
       type: String,
       trim: true,
-      default: '', // Student Roll No or Staff Employee ID
+      default: '', // MRN, Account No, Employee ID, or Customer ID
     },
     phone: {
       type: String,

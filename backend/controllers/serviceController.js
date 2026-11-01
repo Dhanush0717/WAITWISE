@@ -5,12 +5,26 @@ const { calculateWaitTime } = require('../utils/predictionEngine');
 const { emitToService, emitToAdmin } = require('../sockets/socketHandler');
 const { logAction } = require('../utils/auditLogger');
 
-// @desc    Get all campus services with live calculated queue stats
+// @desc    Get all services with live calculated queue stats (optionally filtered by organisation or branch)
 // @route   GET /api/services
 // @access  Public
 const listServices = async (req, res, next) => {
   try {
-    const services = await Service.find().sort({ name: 1 });
+    const filter = {};
+    if (req.query.organisationId) {
+      filter.organisationId = req.query.organisationId;
+    }
+    if (req.query.branchId) {
+      filter.branchId = req.query.branchId;
+    }
+    if (req.query.category && req.query.category !== 'all') {
+      filter.category = req.query.category;
+    }
+
+    const services = await Service.find(filter)
+      .populate('organisationId', 'name slug type branding terminology')
+      .populate('branchId', 'name code address')
+      .sort({ name: 1 });
 
     const servicesWithStats = await Promise.all(
       services.map(async (service) => {
@@ -27,7 +41,6 @@ const listServices = async (req, res, next) => {
 
         const waitInfo = await calculateWaitTime(service._id, waitingCount);
 
-        // Determine load level based on service overflow threshold
         let loadLevel = 'low'; // Green
         if (waitingCount >= service.overflowThreshold) {
           loadLevel = 'high'; // Red
@@ -66,7 +79,10 @@ const listServices = async (req, res, next) => {
 // @access  Public
 const getServiceDetails = async (req, res, next) => {
   try {
-    const service = await Service.findById(req.params.id);
+    const service = await Service.findById(req.params.id)
+      .populate('organisationId')
+      .populate('branchId');
+
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
@@ -110,23 +126,36 @@ const getServiceDetails = async (req, res, next) => {
 
 // @desc    Create new service
 // @route   POST /api/services
-// @access  Private (Admin)
+// @access  Private (Org Admin, Super Admin)
 const createService = async (req, res, next) => {
   try {
-    const service = await Service.create(req.body);
+    const orgId = req.body.organisationId || (req.user ? req.user.organisationId : null);
+    const branchId = req.body.branchId || (req.user ? req.user.branchId : null);
+
+    const serviceData = {
+      ...req.body,
+      organisationId: orgId,
+      branchId: branchId,
+    };
+
+    const service = await Service.create(serviceData);
 
     // Automatically create Counter 1 for this new service
     await Counter.create({
+      organisationId: orgId,
+      branchId: branchId,
       serviceId: service._id,
       counterNumber: 1,
-      name: `${service.code} Counter 1`,
+      name: `${service.code} Station 1`,
       status: 'closed',
     });
 
     await logAction({
-      actorId: req.user._id,
-      actorName: req.user.name,
-      actorRole: req.user.role,
+      organisationId: orgId,
+      branchId: branchId,
+      actorId: req.user ? req.user._id : null,
+      actorName: req.user ? req.user.name : 'System',
+      actorRole: req.user ? req.user.role : 'admin',
       action: 'SERVICE_CREATED',
       resourceType: 'Service',
       resourceId: service._id,
@@ -144,7 +173,7 @@ const createService = async (req, res, next) => {
 
 // @desc    Update service configuration
 // @route   PUT /api/services/:id
-// @access  Private (Admin)
+// @access  Private (Org Admin, Super Admin)
 const updateService = async (req, res, next) => {
   try {
     const service = await Service.findByIdAndUpdate(req.params.id, req.body, {
@@ -162,6 +191,7 @@ const updateService = async (req, res, next) => {
     });
 
     await logAction({
+      organisationId: service.organisationId,
       actorId: req.user._id,
       actorName: req.user.name,
       actorRole: req.user.role,
@@ -182,7 +212,7 @@ const updateService = async (req, res, next) => {
 
 // @desc    Set service operating status ('active', 'paused', 'closed')
 // @route   PATCH /api/services/:id/status
-// @access  Private (Admin or assigned Staff)
+// @access  Private (Org Admin, Branch Manager, Staff)
 const setServiceStatus = async (req, res, next) => {
   try {
     const { status } = req.body;
@@ -209,6 +239,7 @@ const setServiceStatus = async (req, res, next) => {
     });
 
     await logAction({
+      organisationId: service.organisationId,
       actorId: req.user._id,
       actorName: req.user.name,
       actorRole: req.user.role,
@@ -231,12 +262,15 @@ const setServiceStatus = async (req, res, next) => {
 // @access  Public
 const getServiceQR = async (req, res, next) => {
   try {
-    const service = await Service.findById(req.params.id);
+    const service = await Service.findById(req.params.id)
+      .populate('organisationId')
+      .populate('branchId');
+
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
 
-    const host = process.env.CLIENT_URL || 'http://localhost:5173';
+    const host = process.env.CLIENT_URL || 'http://localhost:4200';
     const joinUrl = `${host}/services/${service._id}/join?key=${service.qrJoinKey}`;
 
     res.status(200).json({
@@ -245,6 +279,8 @@ const getServiceQR = async (req, res, next) => {
         serviceId: service._id,
         serviceName: service.name,
         serviceCode: service.code,
+        organisation: service.organisationId,
+        branch: service.branchId,
         location: service.location,
         joinUrl,
         qrJoinKey: service.qrJoinKey,

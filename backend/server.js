@@ -11,6 +11,7 @@ const errorHandler = require('./middleware/errorHandler');
 
 // Route imports
 const authRoutes = require('./routes/authRoutes');
+const organisationRoutes = require('./routes/organisationRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
 const counterRoutes = require('./routes/counterRoutes');
 const queueRoutes = require('./routes/queueRoutes');
@@ -22,9 +23,21 @@ const app = express();
 const server = http.createServer(app);
 
 // Initialize Socket.IO
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'http://localhost:4200',
+  'http://localhost:5173',
+].filter(Boolean);
+
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl) or if origin in allowedOrigins
+      if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:')) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Permissive in development
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
   },
@@ -34,14 +47,19 @@ initSocket(io);
 // Security & utility middleware
 app.use(
   helmet({
-    contentSecurityPolicy: false, // Allow inline styles and CDN maps in development
+    contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
   })
 );
 
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:')) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
   })
 );
@@ -57,13 +75,15 @@ if (process.env.NODE_ENV !== 'test') {
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
-    system: 'WAITWISE - Intelligent Campus Queue Platform',
+    system: 'WAITWISE – Universal Smart Queue & Crowd Management Platform',
+    tagline: 'One Platform. Every Queue. Zero Unnecessary Waiting.',
     timestamp: new Date().toISOString(),
   });
 });
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/organisations', organisationRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/counters', counterRoutes);
 app.use('/api/queues', queueRoutes);

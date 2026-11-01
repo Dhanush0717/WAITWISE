@@ -12,6 +12,18 @@ const ticketSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    organisationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Organisation',
+      default: null,
+      index: true,
+    },
+    branchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Branch',
+      default: null,
+      index: true,
+    },
     serviceId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Service',
@@ -33,7 +45,7 @@ const ticketSchema = new mongoose.Schema(
     customerName: {
       type: String,
       trim: true,
-      default: 'Guest Customer',
+      default: 'Guest Visitor',
     },
     customerIdentifier: {
       type: String,
@@ -105,7 +117,7 @@ const ticketSchema = new mongoose.Schema(
   }
 );
 
-// Compound index for fast FIFO querying of active waiting queue
+ticketSchema.index({ organisationId: 1, status: 1 });
 ticketSchema.index({ serviceId: 1, status: 1, sequenceNumber: 1 });
 ticketSchema.index({ serviceId: 1, status: 1, joinedAt: 1 });
 

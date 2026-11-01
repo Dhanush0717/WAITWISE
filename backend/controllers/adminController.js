@@ -2,16 +2,33 @@ const Service = require('../models/Service');
 const Counter = require('../models/Counter');
 const Ticket = require('../models/Ticket');
 const User = require('../models/User');
+const Organisation = require('../models/Organisation');
+const Branch = require('../models/Branch');
 const AuditLog = require('../models/AuditLog');
 const { calculateWaitTime } = require('../utils/predictionEngine');
 const { logAction } = require('../utils/auditLogger');
 
-// @desc    Get campus crowd overview & KPI dashboard metrics
+// Helper to get tenant filter based on user role and query
+const getTenantFilter = (req) => {
+  const filter = {};
+  if (req.user && req.user.role !== 'super_admin' && req.user.organisationId) {
+    filter.organisationId = req.user.organisationId;
+  } else if (req.query.organisationId) {
+    filter.organisationId = req.query.organisationId;
+  }
+  if (req.query.branchId) {
+    filter.branchId = req.query.branchId;
+  }
+  return filter;
+};
+
+// @desc    Get organization crowd overview & KPI dashboard metrics
 // @route   GET /api/admin/dashboard
-// @access  Private (Admin)
+// @access  Private (Org Admin, Branch Manager, Super Admin)
 const getDashboardMetrics = async (req, res, next) => {
   try {
     const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
+    const tenantFilter = getTenantFilter(req);
 
     const [
       totalServices,
@@ -22,18 +39,25 @@ const getDashboardMetrics = async (req, res, next) => {
       openCounters,
       todayCompleted,
       servicesList,
+      branchesList,
     ] = await Promise.all([
-      Service.countDocuments(),
-      Service.countDocuments({ status: 'active' }),
-      Ticket.countDocuments({ status: 'WAITING' }),
-      Ticket.countDocuments({ status: 'SERVING' }),
-      Counter.countDocuments(),
-      Counter.countDocuments({ status: { $in: ['open', 'busy'] } }),
-      Ticket.countDocuments({ status: 'COMPLETED', completedAt: { $gte: todayStart } }),
-      Service.find().sort({ name: 1 }),
+      Service.countDocuments(tenantFilter),
+      Service.countDocuments({ ...tenantFilter, status: 'active' }),
+      Ticket.countDocuments({ ...tenantFilter, status: 'WAITING' }),
+      Ticket.countDocuments({ ...tenantFilter, status: 'SERVING' }),
+      Counter.countDocuments(tenantFilter),
+      Counter.countDocuments({ ...tenantFilter, status: { $in: ['open', 'busy'] } }),
+      Ticket.countDocuments({
+        ...tenantFilter,
+        status: 'COMPLETED',
+        completedAt: { $gte: todayStart },
+      }),
+      Service.find(tenantFilter).populate('branchId', 'name code').sort({ name: 1 }),
+      tenantFilter.organisationId
+        ? Branch.find({ organisationId: tenantFilter.organisationId }).sort({ name: 1 })
+        : Branch.find().limit(20).sort({ name: 1 }),
     ]);
 
-    // Service-by-service crowd metrics
     let longestWaitMinutes = 0;
     let longestWaitService = 'None';
 
@@ -64,6 +88,7 @@ const getDashboardMetrics = async (req, res, next) => {
           code: svc.code,
           category: svc.category,
           status: svc.status,
+          branch: svc.branchId ? svc.branchId.name : 'Main',
           waiting,
           serving,
           activeCounters: counters,
@@ -89,6 +114,7 @@ const getDashboardMetrics = async (req, res, next) => {
           longestWaitService,
         },
         services: serviceSummaries,
+        branches: branchesList,
       },
     });
   } catch (error) {
@@ -98,14 +124,15 @@ const getDashboardMetrics = async (req, res, next) => {
 
 // @desc    Get detailed queue analytics & historical trends
 // @route   GET /api/admin/analytics
-// @access  Private (Admin)
+// @access  Private (Org Admin, Super Admin)
 const getAnalytics = async (req, res, next) => {
   try {
     const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
+    const tenantFilter = getTenantFilter(req);
 
     // 1. Status breakdown for today
     const outcomeAgg = await Ticket.aggregate([
-      { $match: { createdAt: { $gte: todayStart } } },
+      { $match: { ...tenantFilter, createdAt: { $gte: todayStart } } },
       { $group: { _id: '$status', count: { $sum: 1 } } },
     ]);
 
@@ -137,6 +164,7 @@ const getAnalytics = async (req, res, next) => {
     const durationPerService = await Ticket.aggregate([
       {
         $match: {
+          ...tenantFilter,
           status: 'COMPLETED',
           completedAt: { $gte: todayStart },
           actualDurationMinutes: { $gt: 0 },
@@ -170,7 +198,7 @@ const getAnalytics = async (req, res, next) => {
 
     // 3. Hourly traffic distribution today (08:00 to 18:00)
     const hourlyAgg = await Ticket.aggregate([
-      { $match: { createdAt: { $gte: todayStart } } },
+      { $match: { ...tenantFilter, createdAt: { $gte: todayStart } } },
       {
         $project: {
           hour: { $hour: '$createdAt' },
@@ -186,7 +214,7 @@ const getAnalytics = async (req, res, next) => {
     ]);
 
     const hourlyTraffic = Array.from({ length: 11 }, (_, i) => {
-      const h = i + 8; // 8am to 6pm
+      const h = i + 8;
       const found = hourlyAgg.find((item) => item._id === h);
       return {
         hour: `${String(h).padStart(2, '0')}:00`,
@@ -213,7 +241,7 @@ const getAnalytics = async (req, res, next) => {
 
 // @desc    Simulate opening additional counters for a service
 // @route   POST /api/admin/simulate-counter
-// @access  Private (Admin)
+// @access  Private (Org Admin, Super Admin)
 const simulateCounter = async (req, res, next) => {
   try {
     const { serviceId, additionalCounters = 1 } = req.body;
@@ -235,7 +263,6 @@ const simulateCounter = async (req, res, next) => {
 
     const currentPrediction = await calculateWaitTime(service._id, waitingCount);
 
-    // Simulated scenario
     const simulatedCounters = (activeCounters || 1) + Number(additionalCounters);
     const avgDuration = currentPrediction.avgServiceTimeMinutes || 5;
 
@@ -276,7 +303,7 @@ const simulateCounter = async (req, res, next) => {
           percentageReduction,
         },
         disclaimer:
-          'Simulated projection uses dynamic queue pacing and FIFO service assumptions. Actual performance depends on individual student inquiry complexity.',
+          'Simulated projection uses dynamic queue pacing and FIFO service assumptions. Actual performance depends on individual customer inquiry complexity.',
       },
     });
   } catch (error) {
@@ -284,12 +311,14 @@ const simulateCounter = async (req, res, next) => {
   }
 };
 
-// @desc    Export tickets data as CSV
+// @desc    Export tickets data as CSV (tenant scoped)
 // @route   GET /api/admin/export-csv
-// @access  Private (Admin)
+// @access  Private (Org Admin, Super Admin)
 const exportCSV = async (req, res, next) => {
   try {
-    const tickets = await Ticket.find()
+    const tenantFilter = getTenantFilter(req);
+
+    const tickets = await Ticket.find(tenantFilter)
       .populate('serviceId', 'name code')
       .populate('assignedCounter', 'counterNumber name')
       .sort({ createdAt: -1 })
@@ -317,10 +346,11 @@ const exportCSV = async (req, res, next) => {
 
 // @desc    Get audit logs
 // @route   GET /api/admin/audit-logs
-// @access  Private (Admin)
+// @access  Private (Org Admin, Super Admin)
 const getAuditLogs = async (req, res, next) => {
   try {
-    const logs = await AuditLog.find().sort({ createdAt: -1 }).limit(100);
+    const tenantFilter = getTenantFilter(req);
+    const logs = await AuditLog.find(tenantFilter).sort({ createdAt: -1 }).limit(100);
     res.status(200).json({
       success: true,
       count: logs.length,
@@ -331,12 +361,15 @@ const getAuditLogs = async (req, res, next) => {
   }
 };
 
-// @desc    List all users (students, staff, admin)
+// @desc    List users under organisation
 // @route   GET /api/admin/users
-// @access  Private (Admin)
+// @access  Private (Org Admin, Super Admin)
 const listUsers = async (req, res, next) => {
   try {
-    const users = await User.find()
+    const tenantFilter = getTenantFilter(req);
+    const users = await User.find(tenantFilter)
+      .populate('organisationId', 'name slug')
+      .populate('branchId', 'name code')
       .populate('assignedService', 'name code')
       .populate('assignedCounter', 'counterNumber name')
       .select('-password')
@@ -352,12 +385,12 @@ const listUsers = async (req, res, next) => {
   }
 };
 
-// @desc    Create new staff or admin user
+// @desc    Create new staff / manager user
 // @route   POST /api/admin/users
-// @access  Private (Admin)
+// @access  Private (Org Admin, Super Admin)
 const createUser = async (req, res, next) => {
   try {
-    const { name, email, password, role, identifier, phone, assignedService, assignedCounter } = req.body;
+    const { name, email, password, role, identifier, phone, assignedService, assignedCounter, branchId } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Name, email, and password are required' });
@@ -368,6 +401,8 @@ const createUser = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Email already registered' });
     }
 
+    const orgId = req.user.role === 'super_admin' ? (req.body.organisationId || null) : req.user.organisationId;
+
     const user = await User.create({
       name,
       email: email.toLowerCase().trim(),
@@ -375,11 +410,14 @@ const createUser = async (req, res, next) => {
       role: role || 'staff',
       identifier: identifier || '',
       phone: phone || '',
+      organisationId: orgId,
+      branchId: branchId || req.user.branchId || null,
       assignedService: assignedService || null,
       assignedCounter: assignedCounter || null,
     });
 
     await logAction({
+      organisationId: orgId,
       actorId: req.user._id,
       actorName: req.user.name,
       actorRole: req.user.role,

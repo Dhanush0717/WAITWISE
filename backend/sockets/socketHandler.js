@@ -22,6 +22,14 @@ const initSocket = (io) => {
       }
     });
 
+    // Join room for a specific organisation
+    socket.on('join_org', (orgId) => {
+      if (orgId) {
+        socket.join(`org:${orgId}`);
+        console.log(`Socket ${socket.id} joined room: org:${orgId}`);
+      }
+    });
+
     // Join room for a specific ticket (for private turn alerts)
     socket.on('join_ticket', (ticketId) => {
       if (ticketId) {
