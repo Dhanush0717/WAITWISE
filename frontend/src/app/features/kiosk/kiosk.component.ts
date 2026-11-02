@@ -68,9 +68,9 @@ import { QrDisplayModalComponent } from '../../shared/components/qr-display-moda
               {{ svc.description || 'Quick counter assistance.' }}
             </p>
 
-            <div class="flex items-center justify-between pt-4 border-t border-slate-700/60 group-hover:border-white/20 text-xs">
-              <span class="text-slate-400 group-hover:text-white">Waiting in line:</span>
-              <strong class="text-lg font-mono font-black text-emerald-400 group-hover:text-white">{{ svc.waitingCount || 0 }}</strong>
+            <div class="flex items-center justify-between pt-4 border-t border-slate-700/60 group-hover:border-white/20 text-xs text-brand-400 group-hover:text-white font-bold">
+              <span>Touch to Dispense Ticket</span>
+              <span>&rarr;</span>
             </div>
           </button>
         </div>
@@ -101,12 +101,12 @@ import { QrDisplayModalComponent } from '../../shared/components/qr-display-moda
 
           <form (ngSubmit)="confirmKioskTicket()" class="space-y-4">
             <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Your Name (Optional)</label>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Your Full Name</label>
               <input
                 type="text"
                 [(ngModel)]="visitorName"
                 name="visitorName"
-                placeholder="Visitor / Walk-In"
+                placeholder="Enter your name (e.g. Alex Morgan)"
                 class="w-full px-4 py-3 rounded-xl border border-slate-700 bg-slate-800 text-white text-sm focus:ring-2 focus:ring-brand-500"
               />
             </div>
@@ -254,7 +254,7 @@ export class KioskComponent implements OnInit, OnDestroy {
 
   selectService(svc: Service) {
     this.selectedServiceForTicket.set(svc);
-    this.visitorName = 'Citizen ' + Math.floor(100 + Math.random() * 900);
+    this.visitorName = '';
     this.visitorPhone = '';
     this.isSenior = false;
   }
@@ -265,11 +265,13 @@ export class KioskComponent implements OnInit, OnDestroy {
 
     this.isDispensing.set(true);
     const serviceId = svc._id || (svc as any).id;
+    const finalName = this.visitorName.trim() || 'Walk-in Citizen';
 
     this.queueService.kioskJoin({
       serviceId,
+      customerName: finalName,
       guestInfo: {
-        name: this.visitorName.trim() || 'Citizen',
+        name: finalName,
         phone: this.visitorPhone.trim() || undefined
       },
       priority: this.isSenior ? 'SENIOR' : 'REGULAR'

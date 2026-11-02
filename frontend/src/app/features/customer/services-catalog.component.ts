@@ -35,7 +35,10 @@ import { Service } from '../../core/models/service.model';
           </div>
 
           <!-- Quick Actions -->
-          <div class="flex items-center gap-3">
+          <div class="flex flex-wrap items-center gap-3">
+            <a routerLink="/service-management" class="px-4 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 flex items-center gap-1.5 shadow-xs">
+              <span>🛠️ + Add Custom Desk</span>
+            </a>
             <a routerLink="/map" class="px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-50 flex items-center gap-1.5 shadow-xs">
               <span>🗺️ Facility Map</span>
             </a>
@@ -45,51 +48,12 @@ import { Service } from '../../core/models/service.model';
           </div>
         </div>
 
-        <!-- Sector Quick Selector Bar -->
-        <div class="mt-4 pt-4 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center gap-2 overflow-x-auto pb-1">
-          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1">Workspace Sector:</span>
-          <button
-            type="button"
-            (click)="selectSectorQuick('healthcare')"
-            [ngClass]="orgService.currentOrganisation()?.type === 'healthcare'
-              ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-500/20'
-              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'"
-            class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0">
-            <span>🏥 Healthcare &amp; Clinical</span>
-          </button>
-          <button
-            type="button"
-            (click)="selectSectorQuick('banking')"
-            [ngClass]="orgService.currentOrganisation()?.type === 'banking'
-              ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-500/20'
-              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'"
-            class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0">
-            <span>🏦 Banking &amp; Financial</span>
-          </button>
-          <button
-            type="button"
-            (click)="selectSectorQuick('government')"
-            [ngClass]="orgService.currentOrganisation()?.type === 'government'
-              ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-500/20'
-              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'"
-            class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0">
-            <span>🏛️ Public &amp; Government</span>
-          </button>
-          <button
-            type="button"
-            (click)="selectSectorQuick('education')"
-            [ngClass]="orgService.currentOrganisation()?.type === 'education'
-              ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-500/20'
-              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'"
-            class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0">
-            <span>🎓 Higher Education</span>
-          </button>
-          <button
-            type="button"
-            (click)="loadAllServices()"
-            class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200">
-            <span>🌐 All Facilities</span>
-          </button>
+        <!-- Info Bar -->
+        <div class="mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800/60 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 gap-2">
+          <span>Active Service Desks for <strong>{{ orgService.currentOrganisation()?.name || 'Citizen Services Center' }}</strong></span>
+          <a routerLink="/service-management" class="text-brand-600 hover:underline font-bold text-xs inline-flex items-center gap-1">
+            <span>Manage Desks &amp; Counters &rarr;</span>
+          </a>
         </div>
 
         <!-- Filter & Search Toolbar -->

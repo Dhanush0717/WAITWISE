@@ -205,8 +205,8 @@ const joinQueue = async (req, res, next) => {
 const kioskJoin = async (req, res, next) => {
   try {
     const { serviceId } = req.body;
-    const customerName = req.body.customerName || req.body.guestInfo?.name || req.body.name;
-    const customerIdentifier = req.body.customerIdentifier || req.body.guestInfo?.phone || req.body.phone;
+    const customerName = (req.body.customerName || req.body.guestInfo?.name || req.body.name || '').trim();
+    const customerIdentifier = (req.body.customerIdentifier || req.body.guestInfo?.phone || req.body.phone || '').trim();
     const priority = req.body.priority || 'REGULAR';
 
     if (!serviceId) {
@@ -238,7 +238,7 @@ const kioskJoin = async (req, res, next) => {
       serviceId: service._id,
       queueSessionId: session._id,
       userId: null,
-      customerName: customerName || `Walk-in Citizen #${sequenceNumber}`,
+      customerName: customerName || `Citizen #${sequenceNumber}`,
       customerIdentifier: customerIdentifier || '',
       priority: priority,
       joinMethod: 'kiosk',
@@ -253,6 +253,7 @@ const kioskJoin = async (req, res, next) => {
       ticket,
       ticketNumber: ticket.ticketNumber,
       sequenceNumber: ticket.sequenceNumber,
+      customerName: ticket.customerName,
       serviceId: sIdStr,
       organisationId: service.organisationId ? service.organisationId._id.toString() : null,
       activeWaitingCount: activeWaitingCount + 1,
@@ -576,7 +577,7 @@ const getLiveQueue = async (req, res, next) => {
           sequenceNumber: t.sequenceNumber,
           position: idx + 1,
           priority: t.priority || 'REGULAR',
-          customerName: t.customerName ? (t.customerName.length > 4 ? `${t.customerName.substring(0, 3)}***` : t.customerName) : 'Citizen',
+          customerName: t.customerName || 'Citizen',
           joinedAt: t.joinedAt,
         })),
         calledTickets,

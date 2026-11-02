@@ -76,7 +76,7 @@ export class QueueService {
     );
   }
 
-  kioskJoin(payload: { serviceId: string; guestInfo: { name: string; phone?: string; identifier?: string }; priority?: string }): Observable<any> {
+  kioskJoin(payload: { serviceId: string; customerName?: string; guestInfo?: { name: string; phone?: string; identifier?: string }; priority?: string }): Observable<any> {
     return this.api.post<any>('/queues/kiosk-join', payload).pipe(
       map(res => (res && res.data) ? res.data : res),
       tap(res => {

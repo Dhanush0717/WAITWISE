@@ -56,7 +56,7 @@ export interface IndustrySector {
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
-              Explore Live Queues
+              Explore Live Desks
             </a>
 
             <a routerLink="/kiosk" target="_blank" class="px-6 py-3.5 rounded-2xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 font-bold text-sm shadow-sm transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
@@ -66,78 +66,74 @@ export interface IndustrySector {
               Entrance Touch Kiosk
             </a>
 
+            <a routerLink="/service-management" class="px-6 py-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-bold text-sm shadow-sm transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
+              <span>🛠️ + Create Custom Desk</span>
+            </a>
+
             <a routerLink="/login" class="px-6 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm transition-all flex items-center gap-2">
               <span>⚡ 1-Click Demo Logins</span>
             </a>
           </div>
 
-          <!-- Professional Sector Selector Card -->
+          <!-- Customizable Service Desk Setup Showcase -->
           <div class="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 sm:p-8 shadow-xl max-w-4xl mx-auto text-left">
-            <div class="pb-5 border-b border-slate-100 dark:border-slate-800">
-              <span class="text-xs font-bold text-brand-600 uppercase tracking-wider">Universal Queue Ecosystem</span>
-              <h3 class="text-xl font-black text-slate-900 dark:text-white mt-1">Select Service Sector</h3>
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Switch workspaces to observe queue orchestration tailored for each operational domain.
-              </p>
+            <div class="pb-5 border-b border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <span class="text-xs font-bold text-brand-600 uppercase tracking-wider">Customizable Queue System</span>
+                <h3 class="text-xl font-black text-slate-900 dark:text-white mt-1">Deploy Your Own Service Desks &amp; Counters</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Any company, clinic, store, or office can define custom desks, assign token prefixes, and start counter service.
+                </p>
+              </div>
+              <a routerLink="/service-management" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-sm shrink-0 flex items-center gap-1.5 self-start sm:self-auto">
+                <span>+ Add Service Desk</span>
+                <span>&rarr;</span>
+              </a>
             </div>
 
-            <!-- 4 Industry Sector Cards -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-6">
-              @for (sec of sectors; track sec.id) {
-                <button
-                  type="button"
-                  (click)="onSelectSector(sec)"
-                  [ngClass]="activeSectorId() === sec.id 
-                    ? 'border-brand-500 bg-brand-50/70 dark:bg-brand-950/40 text-brand-900 dark:text-brand-100 shadow-md ring-2 ring-brand-500/25' 
-                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-800/40 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700'"
-                  class="p-4 rounded-2xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between">
-                  <div>
-                    <div class="text-3xl mb-2">{{ sec.icon }}</div>
-                    <div class="font-black text-sm">{{ sec.name }}</div>
-                    <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">{{ sec.subtitle }}</div>
-                  </div>
-                  <div class="mt-3 pt-2 border-t border-slate-200/60 dark:border-slate-700/60 text-[10px] font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
-                    {{ activeSectorId() === sec.id ? '✓ Active Workspace' : 'Select Sector' }}
-                  </div>
-                </button>
-              }
+            <!-- 3 Step Flow -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
+              <div class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
+                <div class="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-950 text-brand-600 flex items-center justify-center font-bold text-sm mb-3">1</div>
+                <h4 class="font-bold text-sm text-slate-900 dark:text-white mb-1">Define Service Details</h4>
+                <p class="text-xs text-slate-500 leading-relaxed">
+                  Provide your desk name, custom token code (e.g. <code>CS</code>, <code>PASS</code>), duration, and counter number.
+                </p>
+              </div>
+
+              <div class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
+                <div class="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-950 text-brand-600 flex items-center justify-center font-bold text-sm mb-3">2</div>
+                <h4 class="font-bold text-sm text-slate-900 dark:text-white mb-1">Launch Kiosk &amp; Posters</h4>
+                <p class="text-xs text-slate-500 leading-relaxed">
+                  Visitors touch your entrance kiosk or scan printed QR posters on their phone to receive an instant queue pass.
+                </p>
+              </div>
+
+              <div class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
+                <div class="w-8 h-8 rounded-xl bg-brand-100 dark:bg-brand-950 text-brand-600 flex items-center justify-center font-bold text-sm mb-3">3</div>
+                <h4 class="font-bold text-sm text-slate-900 dark:text-white mb-1">Call Next &amp; Serve</h4>
+                <p class="text-xs text-slate-500 leading-relaxed">
+                  Desk staff click "Call Next" on their operator screen. Visitors receive real-time audio chimes and turn alerts.
+                </p>
+              </div>
             </div>
 
-            <!-- Active Workspace Detail Preview -->
-            <div class="mt-6 p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-              <div>
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Domain Terminology</span>
-                <div class="space-y-1 text-xs">
-                  <div class="flex justify-between"><span class="text-slate-500">Service:</span> <strong class="text-slate-900 dark:text-white">{{ currentSector().serviceLabel }}</strong></div>
-                  <div class="flex justify-between"><span class="text-slate-500">Token:</span> <strong class="text-slate-900 dark:text-white">{{ currentSector().tokenLabel }}</strong></div>
-                  <div class="flex justify-between"><span class="text-slate-500">Counter:</span> <strong class="text-slate-900 dark:text-white">{{ currentSector().counterLabel }}</strong></div>
-                  <div class="flex justify-between"><span class="text-slate-500">Staff:</span> <strong class="text-slate-900 dark:text-white">{{ currentSector().staffLabel }}</strong></div>
+            <!-- Quick Live Test Bar -->
+            <div class="mt-6 p-4 rounded-2xl bg-brand-50/60 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-900/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <span class="text-2xl">🏛️</span>
+                <div>
+                  <div class="font-bold text-xs text-brand-900 dark:text-brand-100">Live Configured Organization: State Citizen Services Center</div>
+                  <div class="text-[11px] text-brand-700/80 dark:text-brand-300/80">Window 1 active &bull; Passport &amp; Vehicle RTO Desks ready for testing</div>
                 </div>
               </div>
-
-              <div>
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Live Department Pacing</span>
-                <div class="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs">
-                  <div class="font-bold text-slate-900 dark:text-white flex items-center justify-between">
-                    <span>{{ currentSector().sampleService }}</span>
-                    <span class="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 text-[10px] font-bold">Online</span>
-                  </div>
-                  <div class="text-[11px] text-slate-500 mt-2">
-                    Waiting: <strong class="text-slate-900 dark:text-white">{{ currentSector().sampleWaiting }}</strong> &bull; Serving: <strong class="text-brand-600">{{ currentSector().sampleToken }}</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <button
-                  type="button"
-                  (click)="openSectorWorkspace(currentSector())"
-                  class="w-full py-3 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/25 transition-all text-center flex items-center justify-center gap-2">
-                  <span>Open {{ currentSector().name }}</span>
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                </button>
+              <div class="flex items-center gap-2 w-full sm:w-auto">
+                <a routerLink="/services" class="flex-1 sm:flex-none text-center px-4 py-2 rounded-xl bg-white dark:bg-slate-900 text-slate-800 dark:text-white font-bold text-xs border border-slate-200 dark:border-slate-800 hover:bg-slate-50 shadow-xs">
+                  View Desks Directory
+                </a>
+                <a routerLink="/staff" class="flex-1 sm:flex-none text-center px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-xs">
+                  Open Staff Console &rarr;
+                </a>
               </div>
             </div>
           </div>

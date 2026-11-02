@@ -216,7 +216,7 @@ import { Service } from '../../core/models/service.model';
                       class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">
                       {{ item.priority }}
                     </span>
-                    <span class="text-slate-500">{{ item.guestInfo?.name || item.userId?.name || 'Visitor' }}</span>
+                    <span class="text-slate-700 dark:text-slate-300 font-semibold">{{ item.customerName || item.guestInfo?.name || item.userId?.name || 'Citizen' }}</span>
                   </div>
                   <div class="flex items-center gap-3">
                     <span class="text-slate-400 font-mono">Pos #{{ item.position }}</span>
@@ -234,7 +234,7 @@ import { Service } from '../../core/models/service.model';
                   *ngFor="let item of completedQueue()"
                   class="py-3 flex items-center justify-between text-xs text-slate-500">
                   <span class="font-mono font-bold text-slate-700 dark:text-slate-300">{{ item.ticketNumber }}</span>
-                  <span>{{ item.guestInfo?.name || 'Customer' }}</span>
+                  <span>{{ item.customerName || item.guestInfo?.name || 'Citizen' }}</span>
                   <span class="text-emerald-600 font-bold">Served</span>
                 </div>
               </div>
