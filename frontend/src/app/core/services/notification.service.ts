@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable, tap, map } from 'rxjs';
 import { ApiService } from './api.service';
 import { SocketService } from './socket.service';
 import { AudioService } from '../../shared/components/audio-chime/audio.service';
@@ -14,7 +14,10 @@ export class NotificationService {
   private audio = inject(AudioService);
 
   notifications = signal<NotificationItem[]>([]);
-  unreadCount = computed(() => this.notifications().filter(n => !n.isRead).length);
+  unreadCount = computed(() => {
+    const list = this.notifications();
+    return Array.isArray(list) ? list.filter(n => !n.isRead).length : 0;
+  });
   hasBrowserPermission = signal<boolean>(
     typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted'
   );
@@ -25,7 +28,7 @@ export class NotificationService {
 
   private listenToSocketNotifications() {
     this.socket.notification$.subscribe((notification: NotificationItem) => {
-      this.notifications.update(prev => [notification, ...prev]);
+      this.notifications.update(prev => [notification, ...(Array.isArray(prev) ? prev : [])]);
       this.audio.playChime();
       this.showBrowserNotification(notification.title, notification.message);
     });
@@ -54,8 +57,9 @@ export class NotificationService {
   }
 
   fetchNotifications(): Observable<NotificationItem[]> {
-    return this.api.get<NotificationItem[]>('/notifications').pipe(
-      tap(list => this.notifications.set(list || []))
+    return this.api.get<any>('/notifications').pipe(
+      map(res => (res && Array.isArray(res.data)) ? res.data : (Array.isArray(res) ? res : [])),
+      tap(list => this.notifications.set(Array.isArray(list) ? list : []))
     );
   }
 
@@ -63,7 +67,7 @@ export class NotificationService {
     return this.api.patch(`/notifications/${notificationId}/read`, {}).pipe(
       tap(() => {
         this.notifications.update(list =>
-          list.map(n => (n._id === notificationId || (n as any).id === notificationId ? { ...n, isRead: true } : n))
+          Array.isArray(list) ? list.map(n => (n._id === notificationId || (n as any).id === notificationId ? { ...n, isRead: true } : n)) : []
         );
       })
     );
@@ -72,7 +76,7 @@ export class NotificationService {
   markAllAsRead(): Observable<any> {
     return this.api.patch('/notifications/read-all', {}).pipe(
       tap(() => {
-        this.notifications.update(list => list.map(n => ({ ...n, isRead: true })));
+        this.notifications.update(list => Array.isArray(list) ? list.map(n => ({ ...n, isRead: true })) : []);
       })
     );
   }
