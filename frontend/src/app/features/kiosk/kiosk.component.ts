@@ -53,24 +53,35 @@ import { QrDisplayModalComponent } from '../../shared/components/qr-display-moda
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           <button
             *ngFor="let svc of services()"
-            (click)="selectService(svc)"
-            class="p-8 rounded-3xl bg-slate-800/80 hover:bg-brand-600 border-2 border-slate-700/80 hover:border-brand-400 text-left transition-all active:scale-95 shadow-xl group">
-            <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">
-              {{ svc.icon || '📌' }}
+            (click)="!isClosed(svc) && selectService(svc)"
+            [disabled]="isClosed(svc)"
+            [ngClass]="{
+              'opacity-50 cursor-not-allowed': isClosed(svc),
+              'hover:bg-brand-600 hover:border-brand-400 active:scale-95': !isClosed(svc)
+            }"
+            class="p-8 rounded-3xl bg-slate-800/80 border-2 border-slate-700/80 text-left transition-all shadow-xl group">
+            <div class="flex items-start justify-between">
+              <div class="text-4xl mb-4 group-hover:scale-110 transition-transform">
+                {{ svc.icon || '📌' }}
+              </div>
+              <span *ngIf="isClosed(svc)" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-800">
+                CLOSED
+              </span>
             </div>
-            <div class="text-xs font-bold font-mono text-brand-400 group-hover:text-white uppercase mb-1">
+            <div class="text-xs font-bold font-mono text-brand-400 uppercase mb-1">
               {{ svc.code }} &bull; {{ svc.category }}
             </div>
-            <h3 class="text-2xl font-black text-white group-hover:text-white mb-2">
+            <h3 class="text-2xl font-black text-white mb-2">
               {{ svc.name }}
             </h3>
-            <p class="text-xs text-slate-400 group-hover:text-brand-100 line-clamp-2 mb-4">
+            <p class="text-xs text-slate-400 mb-4">
               {{ svc.description || 'Quick counter assistance.' }}
             </p>
 
-            <div class="flex items-center justify-between pt-4 border-t border-slate-700/60 group-hover:border-white/20 text-xs text-brand-400 group-hover:text-white font-bold">
-              <span>Touch to Dispense Ticket</span>
-              <span>&rarr;</span>
+            <div class="flex items-center justify-between pt-4 border-t border-slate-700/60 text-xs font-bold"
+                 [ngClass]="isClosed(svc) ? 'text-slate-500' : 'text-brand-400 group-hover:text-white'">
+              <span>{{ isClosed(svc) ? 'Counter Closed' : 'Touch to Dispense Ticket' }}</span>
+              <span *ngIf="!isClosed(svc)">&rarr;</span>
             </div>
           </button>
         </div>
@@ -106,7 +117,7 @@ import { QrDisplayModalComponent } from '../../shared/components/qr-display-moda
                 type="text"
                 [(ngModel)]="visitorName"
                 name="visitorName"
-                placeholder="Enter your name (e.g. Alex Morgan)"
+                placeholder="Enter your name"
                 class="w-full px-4 py-3 rounded-xl border border-slate-700 bg-slate-800 text-white text-sm focus:ring-2 focus:ring-brand-500"
               />
             </div>
@@ -250,6 +261,11 @@ export class KioskComponent implements OnInit, OnDestroy {
         }
       }
     });
+  }
+
+  isClosed(svc: any): boolean {
+    const s = (svc?.status || '').toUpperCase();
+    return s === 'CLOSED';
   }
 
   selectService(svc: Service) {

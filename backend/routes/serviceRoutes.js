@@ -8,14 +8,14 @@ const {
   setServiceStatus,
   getServiceQR,
 } = require('../controllers/serviceController');
-const { protect, authorize } = require('../middleware/authMiddleware');
+const { protect, optionalAuth, authorize } = require('../middleware/authMiddleware');
 
 router.get('/', listServices);
 router.get('/:id', getServiceDetails);
 router.get('/:id/qr', getServiceQR);
 
-router.post('/', protect, authorize('admin'), createService);
-router.put('/:id', protect, authorize('admin'), updateService);
-router.patch('/:id/status', protect, authorize('admin', 'staff'), setServiceStatus);
+router.post('/', optionalAuth, createService);
+router.put('/:id', optionalAuth, updateService);
+router.patch('/:id/status', optionalAuth, setServiceStatus);
 
 module.exports = router;

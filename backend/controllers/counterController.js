@@ -65,9 +65,9 @@ const createCounter = async (req, res, next) => {
     });
 
     await logAction({
-      actorId: req.user._id,
-      actorName: req.user.name,
-      actorRole: req.user.role,
+      actorId: req.user ? req.user._id : null,
+      actorName: req.user ? req.user.name : 'System',
+      actorRole: req.user ? req.user.role : 'staff',
       action: 'COUNTER_CREATED',
       resourceType: 'Counter',
       resourceId: counter._id,
@@ -144,9 +144,9 @@ const toggleCounterStatus = async (req, res, next) => {
     });
 
     await logAction({
-      actorId: req.user._id,
-      actorName: req.user.name,
-      actorRole: req.user.role,
+      actorId: req.user ? req.user._id : null,
+      actorName: req.user ? req.user.name : 'System',
+      actorRole: req.user ? req.user.role : 'staff',
       action: `COUNTER_STATUS_${status.toUpperCase()}`,
       resourceType: 'Counter',
       resourceId: counter._id,

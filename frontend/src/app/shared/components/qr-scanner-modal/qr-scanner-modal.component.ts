@@ -60,7 +60,7 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
               <input
                 type="text"
                 [(ngModel)]="manualCode"
-                placeholder="e.g. DOC-001 or Service ID"
+                placeholder="Enter Token or Service Code"
                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm"
               />
             </div>

@@ -33,7 +33,7 @@ export interface Service {
   operatingDays?: number[];
   location: ServiceLocation;
   capacity: ServiceCapacity;
-  status: 'ACTIVE' | 'PAUSED' | 'CLOSED';
+  status: 'ACTIVE' | 'PAUSED' | 'CLOSED' | 'active' | 'paused' | 'closed';
   priorityRules?: {
     allowPriority: boolean;
     priorityMultiplier: number;

@@ -6,11 +6,11 @@ const {
   updateCounter,
   toggleCounterStatus,
 } = require('../controllers/counterController');
-const { protect, authorize } = require('../middleware/authMiddleware');
+const { protect, optionalAuth, authorize } = require('../middleware/authMiddleware');
 
 router.get('/', listCounters);
-router.post('/', protect, authorize('admin'), createCounter);
-router.put('/:id', protect, authorize('admin', 'staff'), updateCounter);
-router.patch('/:id/status', protect, authorize('admin', 'staff'), toggleCounterStatus);
+router.post('/', optionalAuth, createCounter);
+router.put('/:id', optionalAuth, updateCounter);
+router.patch('/:id/status', optionalAuth, toggleCounterStatus);
 
 module.exports = router;

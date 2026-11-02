@@ -47,7 +47,7 @@ import { OrganisationType } from '../../core/models/organisation.model';
               <input
                 type="text"
                 [(ngModel)]="orgName"
-                placeholder="e.g. Apex Health Clinic or Summit Credit Union"
+                placeholder="Organization or Company Name"
                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500"
               />
             </div>
@@ -114,7 +114,7 @@ import { OrganisationType } from '../../core/models/organisation.model';
               <input
                 type="text"
                 [(ngModel)]="branchName"
-                placeholder="e.g. Main City Branch"
+                placeholder="Main Center or Branch Name"
                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500"
               />
             </div>
@@ -124,7 +124,7 @@ import { OrganisationType } from '../../core/models/organisation.model';
               <input
                 type="text"
                 [(ngModel)]="branchCode"
-                placeholder="e.g. MAIN-01"
+                placeholder="Branch Code (MAIN-01)"
                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500"
               />
             </div>
@@ -134,7 +134,7 @@ import { OrganisationType } from '../../core/models/organisation.model';
               <input
                 type="text"
                 [(ngModel)]="branchCity"
-                placeholder="e.g. Metro City"
+                placeholder="City or Region"
                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500"
               />
             </div>
@@ -144,7 +144,7 @@ import { OrganisationType } from '../../core/models/organisation.model';
               <input
                 type="text"
                 [(ngModel)]="branchStreet"
-                placeholder="e.g. 100 Civic Center Blvd"
+                placeholder="Physical Street Address"
                 class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500"
               />
             </div>

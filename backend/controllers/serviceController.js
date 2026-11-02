@@ -131,11 +131,21 @@ const getServiceDetails = async (req, res, next) => {
 // @access  Private (Org Admin, Super Admin)
 const createService = async (req, res, next) => {
   try {
-    const orgId = req.body.organisationId || (req.user ? req.user.organisationId : null);
-    const branchId = req.body.branchId || (req.user ? req.user.branchId : null);
+    let orgId = req.body.organisationId || (req.user ? req.user.organisationId : null);
+    let branchId = req.body.branchId || (req.user ? req.user.branchId : null);
+
+    if (!orgId) {
+      const defaultOrg = await Organisation.findOne({ slug: 'citizen-services' }) || await Organisation.findOne();
+      if (defaultOrg) {
+        orgId = defaultOrg._id;
+        const defaultBranch = await Branch.findOne({ organisationId: defaultOrg._id });
+        if (defaultBranch) branchId = defaultBranch._id;
+      }
+    }
 
     const serviceData = {
       ...req.body,
+      status: (req.body.status || 'active').toLowerCase(),
       organisationId: orgId,
       branchId: branchId,
     };
@@ -178,7 +188,12 @@ const createService = async (req, res, next) => {
 // @access  Private (Org Admin, Super Admin)
 const updateService = async (req, res, next) => {
   try {
-    const service = await Service.findByIdAndUpdate(req.params.id, req.body, {
+    const updateData = { ...req.body };
+    if (updateData.status) {
+      updateData.status = updateData.status.toLowerCase();
+    }
+
+    const service = await Service.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
     });
@@ -194,9 +209,9 @@ const updateService = async (req, res, next) => {
 
     await logAction({
       organisationId: service.organisationId,
-      actorId: req.user._id,
-      actorName: req.user.name,
-      actorRole: req.user.role,
+      actorId: req.user ? req.user._id : null,
+      actorName: req.user ? req.user.name : 'System',
+      actorRole: req.user ? req.user.role : 'admin',
       action: 'SERVICE_UPDATED',
       resourceType: 'Service',
       resourceId: service._id,
@@ -217,8 +232,8 @@ const updateService = async (req, res, next) => {
 // @access  Private (Org Admin, Branch Manager, Staff)
 const setServiceStatus = async (req, res, next) => {
   try {
-    const { status } = req.body;
-    if (!['active', 'paused', 'closed'].includes(status)) {
+    const rawStatus = (req.body.status || '').toLowerCase();
+    if (!['active', 'paused', 'closed'].includes(rawStatus)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid status. Must be active, paused, or closed.',
@@ -227,7 +242,7 @@ const setServiceStatus = async (req, res, next) => {
 
     const service = await Service.findByIdAndUpdate(
       req.params.id,
-      { status },
+      { status: rawStatus },
       { new: true }
     );
 
@@ -237,15 +252,15 @@ const setServiceStatus = async (req, res, next) => {
 
     emitToService(service._id, 'queueStatusChanged', {
       serviceId: service._id,
-      status,
+      status: rawStatus,
     });
 
     await logAction({
       organisationId: service.organisationId,
-      actorId: req.user._id,
-      actorName: req.user.name,
-      actorRole: req.user.role,
-      action: `SERVICE_STATUS_${status.toUpperCase()}`,
+      actorId: req.user ? req.user._id : null,
+      actorName: req.user ? req.user.name : 'System',
+      actorRole: req.user ? req.user.role : 'staff',
+      action: `SERVICE_STATUS_${rawStatus.toUpperCase()}`,
       resourceType: 'Service',
       resourceId: service._id,
     });

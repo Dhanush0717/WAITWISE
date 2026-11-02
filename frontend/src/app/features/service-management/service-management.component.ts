@@ -81,12 +81,27 @@ import { QrDisplayModalComponent } from '../../shared/components/qr-display-moda
                 + Add Counter
               </button>
 
-              <button
-                (click)="toggleServiceStatus(svc)"
-                [ngClass]="svc.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600'"
-                class="px-3.5 py-2 rounded-xl border font-bold text-xs">
-                {{ svc.status === 'ACTIVE' ? 'Active' : 'Paused' }}
-              </button>
+              <!-- Operating Status Selector -->
+              <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
+                <button
+                  (click)="setServiceStatus(svc, 'active')"
+                  [ngClass]="(svc.status || '').toLowerCase() === 'active' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'"
+                  class="px-2.5 py-1.5 rounded-xl font-bold text-[11px] transition-all">
+                  Open
+                </button>
+                <button
+                  (click)="setServiceStatus(svc, 'paused')"
+                  [ngClass]="(svc.status || '').toLowerCase() === 'paused' ? 'bg-amber-500 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'"
+                  class="px-2.5 py-1.5 rounded-xl font-bold text-[11px] transition-all">
+                  Pause
+                </button>
+                <button
+                  (click)="setServiceStatus(svc, 'closed')"
+                  [ngClass]="(svc.status || '').toLowerCase() === 'closed' ? 'bg-rose-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'"
+                  class="px-2.5 py-1.5 rounded-xl font-bold text-[11px] transition-all">
+                  Close Desk
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -96,7 +111,7 @@ import { QrDisplayModalComponent } from '../../shared/components/qr-display-moda
       <div *ngIf="showCreateModal()" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
         <div class="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 dark:border-slate-800">
           <h3 class="text-xl font-black text-slate-900 dark:text-white mb-1">
-            Create New {{ orgService.serviceLabel() }}
+            Create New {{ orgService.serviceLabel() }} Desk
           </h3>
           <p class="text-xs text-slate-500 mb-6">
             Configure desk rules, average service duration, and token prefixes.
@@ -106,22 +121,22 @@ import { QrDisplayModalComponent } from '../../shared/components/qr-display-moda
             <div class="grid grid-cols-2 gap-3">
               <div class="col-span-2">
                 <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Service Name *</label>
-                <input type="text" [(ngModel)]="newServiceName" name="name" required placeholder="e.g. Ophthalmology Clinic" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-white dark:bg-slate-800" />
+                <input type="text" [(ngModel)]="newServiceName" name="name" required placeholder="Desk or Service Name" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-white dark:bg-slate-800" />
               </div>
 
               <div>
                 <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Service Code *</label>
-                <input type="text" [(ngModel)]="newServiceCode" name="code" required placeholder="e.g. OPHTH" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-white dark:bg-slate-800" />
+                <input type="text" [(ngModel)]="newServiceCode" name="code" required placeholder="Desk Code (3-6 chars)" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-white dark:bg-slate-800" />
               </div>
 
               <div>
                 <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Token Prefix *</label>
-                <input type="text" [(ngModel)]="newServicePrefix" name="prefix" required placeholder="e.g. EYE" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-white dark:bg-slate-800" />
+                <input type="text" [(ngModel)]="newServicePrefix" name="prefix" required placeholder="Token Prefix (1-4 letters)" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-white dark:bg-slate-800" />
               </div>
 
               <div>
                 <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Category</label>
-                <input type="text" [(ngModel)]="newServiceCategory" name="category" placeholder="e.g. clinical" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-white dark:bg-slate-800" />
+                <input type="text" [(ngModel)]="newServiceCategory" name="category" placeholder="Department / Section" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs bg-white dark:bg-slate-800" />
               </div>
 
               <div>
@@ -178,9 +193,21 @@ export class ServiceManagementComponent implements OnInit {
   }
 
   loadServices() {
-    const orgId = this.orgService.currentOrganisation()?._id;
+    const org = this.orgService.currentOrganisation() ||
+      this.orgService.organisations().find(o => o.slug === 'citizen-services' || o.type === 'government') ||
+      this.orgService.organisations()[0];
+    const orgId = org ? (org._id || (org as any).id) : null;
     this.queueService.getServices(orgId ? { organisationId: orgId } : undefined).subscribe({
-      next: (svcs) => this.services.set(svcs || [])
+      next: (svcs) => {
+        const list = Array.isArray(svcs) ? svcs : (svcs as any)?.data || [];
+        if (list.length > 0) {
+          this.services.set(list);
+        } else {
+          this.queueService.getServices().subscribe({
+            next: (all) => this.services.set(Array.isArray(all) ? all : (all as any)?.data || [])
+          });
+        }
+      }
     });
   }
 
@@ -193,12 +220,18 @@ export class ServiceManagementComponent implements OnInit {
     return typeof window !== 'undefined' ? `${window.location.origin}/services/${id}` : `https://waitwise.io/services/${id}`;
   }
 
-  toggleServiceStatus(svc: Service) {
-    const newStatus = svc.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+  setServiceStatus(svc: Service, status: 'active' | 'paused' | 'closed') {
     const id = svc._id || (svc as any).id;
-    this.api.put(`/services/${id}`, { status: newStatus }).subscribe({
+    this.api.patch(`/services/${id}/status`, { status }).subscribe({
       next: () => {
-        this.services.update(list => list.map(s => s._id === id ? { ...s, status: newStatus } : s));
+        this.services.update(list => list.map(s => (s._id === id || (s as any).id === id) ? ({ ...s, status } as Service) : s));
+      },
+      error: () => {
+        this.api.put(`/services/${id}`, { status }).subscribe({
+          next: () => {
+            this.services.update(list => list.map(s => (s._id === id || (s as any).id === id) ? ({ ...s, status } as Service) : s));
+          }
+        });
       }
     });
   }
@@ -220,11 +253,13 @@ export class ServiceManagementComponent implements OnInit {
   }
 
   handleCreateService() {
-    const org = this.orgService.currentOrganisation();
-    if (!org) return;
+    const org = this.orgService.currentOrganisation() ||
+      this.orgService.organisations().find(o => o.slug === 'citizen-services' || o.type === 'government') ||
+      this.orgService.organisations()[0];
+    const orgId = org ? (org._id || (org as any).id) : ((this.services()[0] as any)?.organisationId || null);
 
     this.api.post<Service>('/services', {
-      organisationId: org._id,
+      organisationId: orgId,
       name: this.newServiceName,
       code: this.newServiceCode.toUpperCase(),
       prefix: this.newServicePrefix.toUpperCase(),
@@ -239,6 +274,9 @@ export class ServiceManagementComponent implements OnInit {
         this.newServiceCode = '';
         this.newServicePrefix = '';
         this.loadServices();
+      },
+      error: (err) => {
+        alert(err.error?.message || 'Failed to create service desk.');
       }
     });
   }

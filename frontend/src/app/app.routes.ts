@@ -36,10 +36,6 @@ export const routes: Routes = [
     loadComponent: () => import('./features/customer/should-i-go.component').then(m => m.ShouldIGoComponent)
   },
   {
-    path: 'map',
-    loadComponent: () => import('./features/customer/location-map.component').then(m => m.LocationMapComponent)
-  },
-  {
     path: 'kiosk',
     loadComponent: () => import('./features/kiosk/kiosk.component').then(m => m.KioskComponent)
   },
@@ -54,8 +50,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/organisation-dashboard/organisation-dashboard.component').then(m => m.OrganisationDashboardComponent)
   },
   {
+    path: 'service-management',
+    loadComponent: () => import('./features/service-management/service-management.component').then(m => m.ServiceManagementComponent)
+  },
+  {
     path: 'services-management',
-    canActivate: [authGuard, roleGuard(['branch_manager', 'org_admin', 'super_admin'])],
     loadComponent: () => import('./features/service-management/service-management.component').then(m => m.ServiceManagementComponent)
   },
   {

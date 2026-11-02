@@ -39,7 +39,7 @@ import { AuthService } from '../../core/services/auth.service';
               [(ngModel)]="name"
               name="name"
               required
-              placeholder="e.g. John Doe"
+              placeholder="Full Name"
               class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
             />
           </div>

@@ -326,7 +326,7 @@ const seedData = async () => {
     });
 
     const govtOfficer = await User.create({
-      name: 'Clerk Maria Santos',
+      name: 'Counter Desk Officer',
       email: 'clerk@citizenservices.gov',
       password: 'staff123',
       role: 'staff',

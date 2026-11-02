@@ -57,17 +57,35 @@ export class QueueService {
 
   getServiceById(id: string): Observable<Service> {
     return this.api.get<any>(`/services/${id}`).pipe(
-      map(res => (res && res.data) ? res.data : res),
+      map(res => {
+        const payload = (res && res.data) ? res.data : res;
+        if (payload && payload.service) {
+          return {
+            ...payload.service,
+            counters: payload.counters,
+            queue: payload.queue,
+            _id: payload.service._id,
+            id: payload.service._id
+          };
+        }
+        return payload;
+      }),
       tap(svc => this.currentService.set(svc))
     );
   }
 
-  joinQueue(serviceId: string, priority: string = 'REGULAR', notes: string = ''): Observable<{ success: boolean; ticket: Ticket }> {
-    return this.api.post<{ success: boolean; ticket: Ticket }>('/queue/join', {
+  joinQueue(serviceId: string, priority: string = 'REGULAR', notes: string = '', customerName?: string, customerIdentifier?: string): Observable<{ success: boolean; ticket: any }> {
+    return this.api.post<any>('/queue/join', {
       serviceId,
       priority,
-      notes
+      notes,
+      customerName,
+      customerIdentifier
     }).pipe(
+      map(res => {
+        const ticket = res?.data?.ticket || res?.ticket || res?.data || res;
+        return { success: true, ticket, ...(res?.data || {}) };
+      }),
       tap(res => {
         if (res && res.ticket) {
           this.setActiveTicket(res.ticket);
@@ -78,9 +96,12 @@ export class QueueService {
 
   kioskJoin(payload: { serviceId: string; customerName?: string; guestInfo?: { name: string; phone?: string; identifier?: string }; priority?: string }): Observable<any> {
     return this.api.post<any>('/queues/kiosk-join', payload).pipe(
-      map(res => (res && res.data) ? res.data : res),
+      map(res => {
+        const ticket = res?.data?.ticket || res?.ticket || res?.data || res;
+        return { success: true, ticket, ...(res?.data || {}) };
+      }),
       tap(res => {
-        const ticket = res?.ticket || res;
+        const ticket = res?.ticket;
         if (ticket && ticket.ticketNumber) {
           this.setActiveTicket(ticket);
         }

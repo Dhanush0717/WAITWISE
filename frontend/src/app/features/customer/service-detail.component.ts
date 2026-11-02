@@ -159,6 +159,13 @@ import { QrDisplayModalComponent } from '../../shared/components/qr-display-moda
               </p>
 
               <!-- Join Form -->
+              <div *ngIf="isServiceClosed()" class="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-semibold mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>This service desk is currently closed. Token issuance is suspended.</span>
+              </div>
+
               <form (ngSubmit)="handleJoinQueue()" class="space-y-4">
                 <div>
                   <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
@@ -169,7 +176,7 @@ import { QrDisplayModalComponent } from '../../shared/components/qr-display-moda
                     [(ngModel)]="guestName"
                     name="guestName"
                     required
-                    placeholder="e.g. Alex Johnson"
+                    placeholder="Enter your name"
                     class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
@@ -182,7 +189,7 @@ import { QrDisplayModalComponent } from '../../shared/components/qr-display-moda
                     type="tel"
                     [(ngModel)]="guestPhone"
                     name="guestPhone"
-                    placeholder="+1 (555) 000-0000"
+                    placeholder="Enter phone number (optional)"
                     class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
@@ -210,7 +217,7 @@ import { QrDisplayModalComponent } from '../../shared/components/qr-display-moda
                     type="text"
                     [(ngModel)]="notes"
                     name="notes"
-                    placeholder="e.g. General checkup or fee receipt"
+                    placeholder="Specify purpose of visit (optional)"
                     class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
@@ -221,10 +228,10 @@ import { QrDisplayModalComponent } from '../../shared/components/qr-display-moda
 
                 <button
                   type="submit"
-                  [disabled]="isJoining() || !guestName"
+                  [disabled]="isJoining() || !guestName || isServiceClosed()"
                   class="w-full py-3.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
                   <span *ngIf="isJoining()" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  <span>Get My Digital Token &rarr;</span>
+                  <span>{{ isServiceClosed() ? 'Service Desk Closed' : 'Get My Digital Token &rarr;' }}</span>
                 </button>
               </form>
 
@@ -308,11 +315,12 @@ export class ServiceDetailComponent implements OnInit, OnDestroy {
 
   loadService(id: string) {
     this.queueService.getServiceById(id).subscribe({
-      next: (svc) => {
-        this.service.set(svc);
-        if (svc.counters) {
-          this.counters.set(svc.counters);
-          const active = svc.counters.filter((c: any) => c.status === 'BUSY' || c.status === 'OPEN').length;
+      next: (svc: any) => {
+        const parsed = svc?.service ? { ...svc.service, counters: svc.counters, queue: svc.queue, _id: svc.service._id, id: svc.service._id } : svc;
+        this.service.set(parsed);
+        if (parsed?.counters) {
+          this.counters.set(parsed.counters);
+          const active = parsed.counters.filter((c: any) => c.status === 'BUSY' || c.status === 'OPEN').length;
           this.activeCountersCount.set(Math.max(1, active));
         }
       }
@@ -323,6 +331,11 @@ export class ServiceDetailComponent implements OnInit, OnDestroy {
     });
   }
 
+  isServiceClosed(): boolean {
+    const s = this.service()?.status?.toUpperCase();
+    return s === 'CLOSED';
+  }
+
   computedWaitMinutes() {
     const waiting = this.liveQueue()?.waitingCount ?? this.service()?.waitingCount ?? 0;
     const avg = this.service()?.avgServiceDuration || 8;
@@ -331,24 +344,40 @@ export class ServiceDetailComponent implements OnInit, OnDestroy {
   }
 
   serviceQrUrl(): string {
-    const id = this.service()?._id || (this.service() as any)?.id;
+    const id = this.service()?._id || (this.service() as any)?.id || this.route.snapshot.paramMap.get('id');
     return typeof window !== 'undefined' ? `${window.location.origin}/services/${id}` : `https://waitwise.io/services/${id}`;
   }
 
   handleJoinQueue() {
+    const routeId = this.route.snapshot.paramMap.get('id');
     const svc = this.service();
-    if (!svc) return;
+    const serviceId = svc?._id || (svc as any)?.id || routeId;
+    if (!serviceId) {
+      this.errorMessage.set('Service ID is required.');
+      return;
+    }
+
+    if (this.isServiceClosed()) {
+      this.errorMessage.set('This service desk is currently closed.');
+      return;
+    }
 
     this.isJoining.set(true);
     this.errorMessage.set(null);
 
-    const serviceId = svc._id || (svc as any).id;
-
     if (this.authService.isAuthenticated()) {
-      this.queueService.joinQueue(serviceId, this.priority, this.notes).subscribe({
-        next: (res) => {
+      const user = this.authService.currentUser();
+      this.queueService.joinQueue(
+        serviceId,
+        this.priority,
+        this.notes,
+        this.guestName || user?.name,
+        this.guestPhone || user?.phone
+      ).subscribe({
+        next: (res: any) => {
           this.isJoining.set(false);
-          const tid = res.ticket._id || (res.ticket as any).id;
+          const ticketObj = res.ticket || res.data?.ticket || res;
+          const tid = ticketObj._id || ticketObj.id || ticketObj;
           this.router.navigate(['/ticket', tid]);
         },
         error: (err) => {
@@ -357,15 +386,17 @@ export class ServiceDetailComponent implements OnInit, OnDestroy {
         }
       });
     } else {
-      // Guest Kiosk/Self-join
+      // Guest self-join
       this.queueService.kioskJoin({
         serviceId,
+        customerName: this.guestName,
         guestInfo: { name: this.guestName, phone: this.guestPhone },
         priority: this.priority
       }).subscribe({
-        next: (res) => {
+        next: (res: any) => {
           this.isJoining.set(false);
-          const tid = res.ticket._id || (res.ticket as any).id;
+          const ticketObj = res.ticket || res.data?.ticket || res;
+          const tid = ticketObj._id || ticketObj.id || ticketObj;
           this.router.navigate(['/ticket', tid]);
         },
         error: (err) => {

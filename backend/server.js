@@ -118,7 +118,21 @@ const PORT = process.env.PORT || 5000;
 
 // Connect to Database and start server only when run directly (not during Jest test runner)
 if (process.env.NODE_ENV !== 'test') {
-  connectDB().then(() => {
+  connectDB().then(async () => {
+    try {
+      const User = require('./models/User');
+      await User.updateMany(
+        { email: 'clerk@citizenservices.gov' },
+        { $set: { name: 'Counter Desk Officer' } }
+      );
+      await User.updateMany(
+        { name: /Maria Santos/i },
+        { $set: { name: 'Counter Desk Officer' } }
+      );
+    } catch (e) {
+      console.warn('Initial data migration check:', e.message);
+    }
+
     server.listen(PORT, () => {
       console.log(`===============================================`);
       console.log(`🚀 WAITWISE Backend Server running on port ${PORT}`);
