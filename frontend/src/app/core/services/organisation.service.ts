@@ -72,7 +72,8 @@ export class OrganisationService {
           }
         }
         if (orgs && orgs.length > 0 && !this.currentOrganisation()) {
-          this.setOrganisation(orgs[0]);
+          const govtOrg = orgs.find(o => o.slug === 'citizen-services' || o.type === 'government') || orgs[0];
+          this.setOrganisation(govtOrg);
         }
       })
     );

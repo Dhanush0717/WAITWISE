@@ -74,45 +74,31 @@ import { AuthService } from '../../core/services/auth.service';
 
           <div class="grid grid-cols-2 gap-2 text-xs">
             <button
-              (click)="quickLogin('superadmin@waitwise.io', 'admin123')"
-              class="p-2 text-left rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors">
-              <div class="font-bold text-purple-600 dark:text-purple-400">🛡️ Super Admin</div>
-              <div class="text-[10px] text-slate-400 truncate">superadmin&#64;waitwise.io</div>
-            </button>
-
-            <button
-              (click)="quickLogin('doctor@metrohealth.org', 'staff123')"
-              class="p-2 text-left rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors">
-              <div class="font-bold text-rose-600 dark:text-rose-400">🏥 Hospital Doctor</div>
-              <div class="text-[10px] text-slate-400 truncate">doctor&#64;metrohealth.org</div>
-            </button>
-
-            <button
-              (click)="quickLogin('teller@horizonbank.com', 'staff123')"
-              class="p-2 text-left rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors">
-              <div class="font-bold text-emerald-600 dark:text-emerald-400">🏦 Bank Teller</div>
-              <div class="text-[10px] text-slate-400 truncate">teller&#64;horizonbank.com</div>
-            </button>
-
-            <button
               (click)="quickLogin('clerk@citizenservices.gov', 'staff123')"
-              class="p-2 text-left rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors">
-              <div class="font-bold text-blue-600 dark:text-blue-400">🏛️ Passport Clerk</div>
-              <div class="text-[10px] text-slate-400 truncate">clerk&#64;citizenservices.gov</div>
+              class="p-2.5 text-left rounded-xl border-2 border-brand-500 bg-brand-50/60 dark:bg-brand-950/40 hover:bg-brand-100/60 transition-colors">
+              <div class="font-bold text-brand-700 dark:text-brand-300">🏛️ Passport Window Officer</div>
+              <div class="text-[10px] text-slate-500 truncate">clerk&#64;citizenservices.gov (Demo Staff)</div>
             </button>
 
             <button
-              (click)="quickLogin('staff.admin@waitwise.campus', 'staff123')"
-              class="p-2 text-left rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors">
-              <div class="font-bold text-amber-600 dark:text-amber-400">🎓 University Staff</div>
-              <div class="text-[10px] text-slate-400 truncate">staff.admin&#64;waitwise.campus</div>
+              (click)="quickLogin('admin@citizenservices.gov', 'admin123')"
+              class="p-2.5 text-left rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors">
+              <div class="font-bold text-purple-600 dark:text-purple-400">🏛️ Center Administrator</div>
+              <div class="text-[10px] text-slate-400 truncate">admin&#64;citizenservices.gov</div>
             </button>
 
             <button
               (click)="quickLogin('student@waitwise.campus', 'student123')"
-              class="p-2 text-left rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors">
-              <div class="font-bold text-slate-700 dark:text-slate-300">👤 Visitor / Student</div>
+              class="p-2.5 text-left rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors">
+              <div class="font-bold text-emerald-600 dark:text-emerald-400">👤 Citizen / Visitor</div>
               <div class="text-[10px] text-slate-400 truncate">student&#64;waitwise.campus</div>
+            </button>
+
+            <button
+              (click)="quickLogin('superadmin@waitwise.io', 'admin123')"
+              class="p-2.5 text-left rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors">
+              <div class="font-bold text-slate-700 dark:text-slate-300">🛡️ Platform Super Admin</div>
+              <div class="text-[10px] text-slate-400 truncate">superadmin&#64;waitwise.io</div>
             </button>
           </div>
         </div>

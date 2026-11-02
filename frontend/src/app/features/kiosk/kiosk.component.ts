@@ -1,8 +1,10 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { QueueService } from '../../core/services/queue.service';
 import { OrganisationService } from '../../core/services/organisation.service';
+import { SocketService } from '../../core/services/socket.service';
 import { AudioService } from '../../shared/components/audio-chime/audio.service';
 import { Service } from '../../core/models/service.model';
 import { Ticket } from '../../core/models/ticket.model';
@@ -182,9 +184,10 @@ import { QrDisplayModalComponent } from '../../shared/components/qr-display-moda
     </div>
   `
 })
-export class KioskComponent implements OnInit {
+export class KioskComponent implements OnInit, OnDestroy {
   queueService = inject(QueueService);
   orgService = inject(OrganisationService);
+  socketService = inject(SocketService);
   audioService = inject(AudioService);
 
   services = signal<Service[]>([]);
@@ -197,11 +200,21 @@ export class KioskComponent implements OnInit {
   isSenior = false;
   currentTime = '';
   Math = Math;
+  private sub = new Subscription();
 
   ngOnInit() {
     this.updateClock();
-    setInterval(() => this.updateClock(), 1000);
+    const timer = setInterval(() => this.updateClock(), 1000);
+    this.sub.add({ unsubscribe: () => clearInterval(timer) });
+
     this.loadServices();
+
+    this.sub.add(
+      this.socketService.queueUpdated$.subscribe(() => this.loadServices())
+    );
+    this.sub.add(
+      this.socketService.tokenCreated$.subscribe(() => this.loadServices())
+    );
   }
 
   updateClock() {
@@ -210,15 +223,38 @@ export class KioskComponent implements OnInit {
   }
 
   loadServices() {
-    const orgId = this.orgService.currentOrganisation()?._id;
+    const org = this.orgService.currentOrganisation() ||
+      this.orgService.organisations().find(o => o.slug === 'citizen-services' || o.type === 'government');
+    const orgId = org ? (org._id || (org as any).id) : null;
+
     this.queueService.getServices(orgId ? { organisationId: orgId } : undefined).subscribe({
-      next: (svcs) => this.services.set(svcs || [])
+      next: (svcs) => {
+        const list = Array.isArray(svcs) ? svcs : (svcs as any)?.data || [];
+        if (list.length > 0) {
+          this.services.set(list);
+          list.forEach((s: any) => {
+            const sid = s._id || (s as any).id;
+            if (sid) this.socketService.joinService(sid);
+          });
+        } else {
+          this.queueService.getServices().subscribe({
+            next: (allSvcs) => {
+              const allList = Array.isArray(allSvcs) ? allSvcs : (allSvcs as any)?.data || [];
+              this.services.set(allList);
+              allList.forEach((s: any) => {
+                const sid = s._id || (s as any).id;
+                if (sid) this.socketService.joinService(sid);
+              });
+            }
+          });
+        }
+      }
     });
   }
 
   selectService(svc: Service) {
     this.selectedServiceForTicket.set(svc);
-    this.visitorName = 'Visitor ' + Math.floor(100 + Math.random() * 900);
+    this.visitorName = 'Citizen ' + Math.floor(100 + Math.random() * 900);
     this.visitorPhone = '';
     this.isSenior = false;
   }
@@ -233,14 +269,18 @@ export class KioskComponent implements OnInit {
     this.queueService.kioskJoin({
       serviceId,
       guestInfo: {
-        name: this.visitorName.trim() || 'Visitor',
+        name: this.visitorName.trim() || 'Citizen',
         phone: this.visitorPhone.trim() || undefined
       },
       priority: this.isSenior ? 'SENIOR' : 'REGULAR'
     }).subscribe({
-      next: (res) => {
+      next: (res: any) => {
         this.isDispensing.set(false);
-        this.dispensedTicket.set(res.ticket);
+        const ticket = res?.ticket || res;
+        if (ticket) {
+          if (res?.position) ticket.position = res.position;
+          this.dispensedTicket.set(ticket);
+        }
         this.audioService.playChime();
 
         // Refresh service counts
@@ -266,5 +306,9 @@ export class KioskComponent implements OnInit {
     const t = this.dispensedTicket();
     const id = t?._id || (t as any)?.id;
     return typeof window !== 'undefined' ? `${window.location.origin}/ticket/${id}` : `https://waitwise.io/ticket/${id}`;
+  }
+
+  ngOnDestroy() {
+    this.sub.unsubscribe();
   }
 }

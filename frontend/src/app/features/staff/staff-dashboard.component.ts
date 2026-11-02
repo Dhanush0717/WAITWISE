@@ -1,7 +1,7 @@
 import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Subscription } from 'rxjs';
+import { Subscription, map } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { OrganisationService } from '../../core/services/organisation.service';
@@ -363,16 +363,72 @@ export class StaffDashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.loadStaffCounters();
+
+    // Live Socket.IO Events
+    this.sub.add(
+      this.socketService.tokenCreated$.subscribe((event) => {
+        const counter = this.activeCounter();
+        const rawSvc = counter?.serviceId;
+        const currentSvcId = typeof rawSvc === 'object' ? (rawSvc._id || rawSvc.id) : rawSvc;
+        if (!event || !currentSvcId || event.serviceId === currentSvcId) {
+          this.audioService.playChime();
+          this.loadQueueData();
+        }
+      })
+    );
+
+    this.sub.add(
+      this.socketService.queueUpdated$.subscribe((event) => {
+        const counter = this.activeCounter();
+        const rawSvc = counter?.serviceId;
+        const currentSvcId = typeof rawSvc === 'object' ? (rawSvc._id || rawSvc.id) : rawSvc;
+        if (!event || !currentSvcId || event.serviceId === currentSvcId) {
+          this.loadQueueData();
+        }
+      })
+    );
+
+    this.sub.add(this.socketService.tokenCalled$.subscribe(() => this.loadQueueData()));
+    this.sub.add(this.socketService.serviceStarted$.subscribe(() => this.loadQueueData()));
+    this.sub.add(this.socketService.tokenCompleted$.subscribe(() => this.loadQueueData()));
+    this.sub.add(this.socketService.tokenSkipped$.subscribe(() => this.loadQueueData()));
+    this.sub.add(this.socketService.tokenCancelled$.subscribe(() => this.loadQueueData()));
   }
 
   loadStaffCounters() {
-    this.api.get<Counter[]>('/counters').subscribe({
-      next: (list) => {
+    this.api.get<any>('/counters').pipe(
+      map(res => (res && Array.isArray(res.data)) ? res.data : (Array.isArray(res) ? res : []))
+    ).subscribe({
+      next: (list: Counter[]) => {
         this.counters.set(list || []);
         if (list && list.length > 0) {
-          const first = list[0];
-          this.selectedCounterId = first._id || (first as any).id;
-          this.activeCounter.set(first);
+          const user = this.authService.currentUser();
+          const userId = user?._id || (user as any)?.id;
+          const assignedCounterId = user?.assignedCounter ? (typeof user.assignedCounter === 'object' ? (user.assignedCounter._id || user.assignedCounter.id) : user.assignedCounter) : null;
+
+          // Priority 1: User's explicitly assigned counter
+          let matched = assignedCounterId ? list.find(c => (c._id || (c as any).id) === assignedCounterId) : null;
+
+          // Priority 2: Counter where assignedStaff matches current user
+          if (!matched && userId) {
+            matched = list.find(c => {
+              const staff = c.assignedStaff;
+              const sid = typeof staff === 'object' ? (staff?._id || staff?.id) : staff;
+              return sid === userId;
+            });
+          }
+
+          // Priority 3: Government Citizen Services Window 1 (flagship default)
+          if (!matched) {
+            matched = list.find(c => {
+              const cName = (c.name || c.counterName || '').toLowerCase();
+              return cName.includes('window 1') || cName.includes('biometrics');
+            }) || list[0];
+          }
+
+          const target = matched || list[0];
+          this.selectedCounterId = target._id || (target as any).id;
+          this.activeCounter.set(target);
           this.loadQueueData();
         }
       }
@@ -391,17 +447,22 @@ export class StaffDashboardComponent implements OnInit, OnDestroy {
     const counter = this.activeCounter();
     if (!counter) return;
 
-    const serviceId = typeof counter.serviceId === 'object' ? (counter.serviceId._id || counter.serviceId.id) : counter.serviceId;
+    const rawSvc = counter.serviceId;
+    const serviceId = typeof rawSvc === 'object' ? (rawSvc._id || rawSvc.id) : rawSvc;
     if (serviceId) {
       this.socketService.joinService(serviceId);
-      this.api.get<any>(`/queue/live/${serviceId}`).subscribe({
+      this.api.get<any>(`/queues/services/${serviceId}/live`).pipe(
+        map(res => (res && res.data) ? res.data : res)
+      ).subscribe({
         next: (data) => {
           this.waitingQueue.set(data.waitingTickets || []);
           this.completedQueue.set(data.completedTickets || []);
           if (counter.currentTicketId) {
             const tid = typeof counter.currentTicketId === 'object' ? (counter.currentTicketId._id || counter.currentTicketId.id) : counter.currentTicketId;
-            this.api.get<Ticket>(`/queue/ticket/${tid}`).subscribe({
-              next: (t) => this.currentServingTicket.set(t)
+            this.api.get<any>(`/queues/tickets/${tid}`).pipe(
+              map(res => (res && res.data) ? res.data : res)
+            ).subscribe({
+              next: (t) => this.currentServingTicket.set(t?.ticket || t)
             });
           } else {
             this.currentServingTicket.set(null);
@@ -427,10 +488,13 @@ export class StaffDashboardComponent implements OnInit, OnDestroy {
     if (!counter) return;
     const cid = counter._id || counter.id;
 
-    this.api.post<{ success: boolean; ticket: Ticket }>(`/queue/counter/${cid}/call-next`, {}).subscribe({
+    this.api.post<any>('/staff/call-next', { counterId: cid }).pipe(
+      map(res => (res && res.data) ? res.data : res)
+    ).subscribe({
       next: (res) => {
-        if (res && res.ticket) {
-          this.currentServingTicket.set(res.ticket);
+        const ticket = res?.ticket || res;
+        if (ticket && ticket.ticketNumber) {
+          this.currentServingTicket.set(ticket);
           this.audioService.playChime();
           this.loadQueueData();
         }
@@ -443,9 +507,12 @@ export class StaffDashboardComponent implements OnInit, OnDestroy {
     if (!ticket) return;
     const tid = ticket._id || (ticket as any).id;
 
-    this.api.post(`/queue/serve/${tid}`, {}).subscribe({
-      next: () => {
-        this.currentServingTicket.update(t => t ? { ...t, status: 'SERVING' } : null);
+    this.api.post<any>('/staff/start-service', { ticketId: tid }).pipe(
+      map(res => (res && res.data) ? res.data : res)
+    ).subscribe({
+      next: (res) => {
+        const updated = res?.ticket || res;
+        this.currentServingTicket.update(t => t ? { ...t, status: 'SERVING' } : updated);
       }
     });
   }
@@ -454,8 +521,10 @@ export class StaffDashboardComponent implements OnInit, OnDestroy {
     const ticket = this.currentServingTicket();
     if (!ticket) return;
     const tid = ticket._id || (ticket as any).id;
+    const counter = this.activeCounter();
+    const cid = counter ? (counter._id || counter.id) : undefined;
 
-    this.api.post(`/queue/complete/${tid}`, {}).subscribe({
+    this.api.post<any>('/staff/complete-service', { ticketId: tid, counterId: cid }).subscribe({
       next: () => {
         this.currentServingTicket.set(null);
         this.loadQueueData();
@@ -468,7 +537,7 @@ export class StaffDashboardComponent implements OnInit, OnDestroy {
     if (!ticket) return;
     const tid = ticket._id || (ticket as any).id;
 
-    this.api.post(`/queue/skip/${tid}`, { reason: this.skipReason }).subscribe({
+    this.api.post<any>('/staff/skip', { ticketId: tid, reason: this.skipReason }).subscribe({
       next: () => {
         this.showSkipModal.set(false);
         this.currentServingTicket.set(null);
@@ -483,7 +552,7 @@ export class StaffDashboardComponent implements OnInit, OnDestroy {
     const tid = ticket._id || (ticket as any).id;
 
     if (confirm('Mark this customer as a no-show?')) {
-      this.api.post(`/queue/no-show/${tid}`, {}).subscribe({
+      this.api.post<any>('/staff/no-show', { ticketId: tid }).subscribe({
         next: () => {
           this.currentServingTicket.set(null);
           this.loadQueueData();
@@ -495,11 +564,13 @@ export class StaffDashboardComponent implements OnInit, OnDestroy {
   submitAssistedWalkIn() {
     const counter = this.activeCounter();
     if (!counter) return;
-    const serviceId = typeof counter.serviceId === 'object' ? (counter.serviceId._id || counter.serviceId.id) : counter.serviceId;
+    const rawSvc = counter.serviceId;
+    const serviceId = typeof rawSvc === 'object' ? (rawSvc._id || rawSvc.id) : rawSvc;
 
-    this.api.post<{ success: boolean; ticket: Ticket }>('/queue/staff-issue', {
+    this.api.post<any>('/queues/staff-issue', {
       serviceId,
-      guestInfo: { name: this.walkInName, phone: this.walkInPhone },
+      customerName: this.walkInName.trim() || 'Assisted Citizen',
+      customerIdentifier: this.walkInPhone.trim(),
       priority: this.walkInPriority
     }).subscribe({
       next: () => {

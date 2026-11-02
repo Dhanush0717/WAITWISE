@@ -98,6 +98,7 @@ app.use('/api/organisations', organisationRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/counters', counterRoutes);
 app.use('/api/queues', queueRoutes);
+app.use('/api/queue', queueRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);

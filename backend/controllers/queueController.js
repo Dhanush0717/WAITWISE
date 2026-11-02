@@ -144,6 +144,7 @@ const joinQueue = async (req, res, next) => {
 
     // Emit real-time events
     emitToService(service._id, 'tokenCreated', {
+      ticket,
       ticketNumber: ticket.ticketNumber,
       sequenceNumber: ticket.sequenceNumber,
       serviceId: service._id,
@@ -202,7 +203,10 @@ const joinQueue = async (req, res, next) => {
 // @access  Public
 const kioskJoin = async (req, res, next) => {
   try {
-    const { serviceId, customerName, customerIdentifier } = req.body;
+    const { serviceId } = req.body;
+    const customerName = req.body.customerName || req.body.guestInfo?.name || req.body.name;
+    const customerIdentifier = req.body.customerIdentifier || req.body.guestInfo?.phone || req.body.phone;
+    const priority = req.body.priority || 'REGULAR';
 
     if (!serviceId) {
       return res.status(400).json({ success: false, message: 'serviceId is required' });
@@ -233,26 +237,29 @@ const kioskJoin = async (req, res, next) => {
       serviceId: service._id,
       queueSessionId: session._id,
       userId: null,
-      customerName: customerName || `Walk-in Guest #${sequenceNumber}`,
+      customerName: customerName || `Walk-in Citizen #${sequenceNumber}`,
       customerIdentifier: customerIdentifier || '',
+      priority: priority,
       joinMethod: 'kiosk',
       status: 'WAITING',
       guestAccessToken,
     });
 
     const waitInfo = await calculateWaitTime(service._id, activeWaitingCount);
+    const sIdStr = service._id.toString();
 
-    emitToService(service._id, 'tokenCreated', {
+    emitToService(sIdStr, 'tokenCreated', {
+      ticket,
       ticketNumber: ticket.ticketNumber,
       sequenceNumber: ticket.sequenceNumber,
-      serviceId: service._id,
-      organisationId: service.organisationId ? service.organisationId._id : null,
+      serviceId: sIdStr,
+      organisationId: service.organisationId ? service.organisationId._id.toString() : null,
       activeWaitingCount: activeWaitingCount + 1,
     });
 
-    emitToService(service._id, 'queueUpdated', {
-      serviceId: service._id,
-      organisationId: service.organisationId ? service.organisationId._id : null,
+    emitToService(sIdStr, 'queueUpdated', {
+      serviceId: sIdStr,
+      organisationId: service.organisationId ? service.organisationId._id.toString() : null,
       waitingCount: activeWaitingCount + 1,
     });
 
@@ -288,7 +295,10 @@ const kioskJoin = async (req, res, next) => {
 // @access  Private (Staff, Branch Manager, Org Admin, Super Admin)
 const staffIssueToken = async (req, res, next) => {
   try {
-    const { serviceId, customerName, customerIdentifier, notes } = req.body;
+    const { serviceId, notes } = req.body;
+    const customerName = req.body.customerName || req.body.guestInfo?.name || req.body.name || 'Walk-in Citizen';
+    const customerIdentifier = req.body.customerIdentifier || req.body.guestInfo?.phone || req.body.phone || '';
+    const priority = req.body.priority || 'REGULAR';
 
     const targetServiceId = serviceId || req.user.assignedService;
     if (!targetServiceId) {
@@ -319,6 +329,7 @@ const staffIssueToken = async (req, res, next) => {
       userId: null,
       customerName: customerName || `Assisted Visitor #${sequenceNumber}`,
       customerIdentifier: customerIdentifier || '',
+      priority: priority,
       joinMethod: 'staff_assisted',
       status: 'WAITING',
       guestAccessToken,
@@ -327,6 +338,7 @@ const staffIssueToken = async (req, res, next) => {
     const waitInfo = await calculateWaitTime(service._id, activeWaitingCount);
 
     emitToService(service._id, 'tokenCreated', {
+      ticket,
       ticketNumber: ticket.ticketNumber,
       sequenceNumber: ticket.sequenceNumber,
       serviceId: service._id,

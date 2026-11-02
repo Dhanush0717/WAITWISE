@@ -265,6 +265,20 @@ export class LandingComponent implements OnInit {
 
   sectors: IndustrySector[] = [
     {
+      id: 'government',
+      slug: 'citizen-services',
+      icon: '🏛️',
+      name: 'Public & Government',
+      subtitle: 'Passports, RTO, & civic bureaus',
+      serviceLabel: 'Citizen Counter',
+      tokenLabel: 'Application Token',
+      counterLabel: 'Service Window',
+      staffLabel: 'Passport Officer',
+      sampleService: 'Passport Issuance & Renewal',
+      sampleWaiting: 12,
+      sampleToken: 'PASS-089'
+    },
+    {
       id: 'healthcare',
       slug: 'metro-health',
       icon: '🏥',
@@ -293,20 +307,6 @@ export class LandingComponent implements OnInit {
       sampleToken: 'CS-034'
     },
     {
-      id: 'government',
-      slug: 'citizen-services',
-      icon: '🏛️',
-      name: 'Public & Government',
-      subtitle: 'Passports, RTO, & civic bureaus',
-      serviceLabel: 'Citizen Counter',
-      tokenLabel: 'Application Token',
-      counterLabel: 'Service Window',
-      staffLabel: 'Passport Officer',
-      sampleService: 'Passport Issuance & Renewal',
-      sampleWaiting: 12,
-      sampleToken: 'PASS-089'
-    },
-    {
       id: 'education',
       slug: 'central-univ',
       icon: '🎓',
@@ -322,7 +322,7 @@ export class LandingComponent implements OnInit {
     }
   ];
 
-  activeSectorId = signal<string>('healthcare');
+  activeSectorId = signal<string>('government');
   simPeopleAhead = signal<number>(4);
 
   currentSector = computed<IndustrySector>(() => {

@@ -6,7 +6,9 @@ export interface Counter {
   serviceId: string | any;
   counterNumber: number;
   counterName: string;
+  name?: string;
   assignedStaffId?: string | any;
+  assignedStaff?: string | any;
   status: 'OPEN' | 'BUSY' | 'PAUSED' | 'CLOSED';
   currentTicketId?: string | any;
   stats?: {

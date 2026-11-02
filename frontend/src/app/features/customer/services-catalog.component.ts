@@ -313,26 +313,62 @@ export class ServicesCatalogComponent implements OnInit, OnDestroy {
   }
 
   selectSectorQuick(type: string) {
-    this.orgService.selectSector(type);
-    const org = this.orgService.organisations().find(o => o.type === type || o.slug === type);
+    const org = this.orgService.selectSector(type);
     if (org) {
-      this.loadCatalog(org._id);
+      this.fetchServices(org._id || (org as any).id);
     } else {
-      this.loadCatalog();
+      this.orgService.loadOrganisations().subscribe({
+        next: (orgs) => {
+          const match = orgs.find(o => o.type === type || o.slug === type);
+          if (match) {
+            this.orgService.setOrganisation(match);
+            this.fetchServices(match._id || (match as any).id);
+          } else {
+            this.fetchServices();
+          }
+        },
+        error: () => this.fetchServices()
+      });
     }
   }
 
   loadCatalog(orgId?: string) {
     this.isLoading.set(true);
-    const id = orgId || this.orgService.currentOrganisation()?._id || (this.orgService.currentOrganisation() as any)?.id;
+    const currentOrg = this.orgService.currentOrganisation();
+    const id = orgId || currentOrg?._id || (currentOrg as any)?.id;
+
+    if (!id) {
+      this.orgService.loadOrganisations().subscribe({
+        next: (orgs) => {
+          const target = orgs.find(o => o.slug === 'citizen-services' || o.type === 'government') || orgs[0];
+          if (target) {
+            this.orgService.setOrganisation(target);
+            this.fetchServices(target._id || (target as any).id);
+          } else {
+            this.fetchServices();
+          }
+        },
+        error: () => this.fetchServices()
+      });
+      return;
+    }
+
+    this.fetchServices(id);
+  }
+
+  private fetchServices(id?: string) {
+    this.isLoading.set(true);
     this.queueService.getServices(id ? { organisationId: id } : undefined).subscribe({
       next: (data) => {
         this.isLoading.set(false);
         const list = Array.isArray(data) ? data : (data as any)?.data || [];
-        if (list.length > 0 || !id) {
+        if (list.length > 0) {
           this.services.set(list);
+          list.forEach((s: any) => {
+            const sid = s._id || s.id;
+            if (sid) this.socketService.joinService(sid);
+          });
         } else {
-          // If active org currently has 0 services, fallback to all available services
           this.loadAllServices();
         }
       },
@@ -350,6 +386,10 @@ export class ServicesCatalogComponent implements OnInit, OnDestroy {
         this.isLoading.set(false);
         const list = Array.isArray(data) ? data : (data as any)?.data || [];
         this.services.set(list);
+        list.forEach((s: any) => {
+          const sid = s._id || s.id;
+          if (sid) this.socketService.joinService(sid);
+        });
       },
       error: () => {
         this.isLoading.set(false);

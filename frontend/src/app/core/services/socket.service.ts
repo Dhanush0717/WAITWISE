@@ -42,14 +42,31 @@ export class SocketService {
       console.log('Socket.IO disconnected');
     });
 
-    this.socket.on('queue_updated', (data) => this.queueUpdated$.next(data));
-    this.socket.on('token_created', (data) => this.tokenCreated$.next(data));
-    this.socket.on('token_called', (data) => this.tokenCalled$.next(data));
-    this.socket.on('service_started', (data) => this.serviceStarted$.next(data));
-    this.socket.on('token_completed', (data) => this.tokenCompleted$.next(data));
-    this.socket.on('token_cancelled', (data) => this.tokenCancelled$.next(data));
-    this.socket.on('token_skipped', (data) => this.tokenSkipped$.next(data));
-    this.socket.on('notification', (data) => this.notification$.next(data));
+    const forward = (subject: Subject<any>) => (data: any) => subject.next(data);
+
+    this.socket.on('queueUpdated', forward(this.queueUpdated$));
+    this.socket.on('queue_updated', forward(this.queueUpdated$));
+
+    this.socket.on('tokenCreated', forward(this.tokenCreated$));
+    this.socket.on('token_created', forward(this.tokenCreated$));
+
+    this.socket.on('tokenCalled', forward(this.tokenCalled$));
+    this.socket.on('token_called', forward(this.tokenCalled$));
+
+    this.socket.on('serviceStarted', forward(this.serviceStarted$));
+    this.socket.on('service_started', forward(this.serviceStarted$));
+
+    this.socket.on('tokenCompleted', forward(this.tokenCompleted$));
+    this.socket.on('token_completed', forward(this.tokenCompleted$));
+
+    this.socket.on('tokenCancelled', forward(this.tokenCancelled$));
+    this.socket.on('token_cancelled', forward(this.tokenCancelled$));
+
+    this.socket.on('tokenSkipped', forward(this.tokenSkipped$));
+    this.socket.on('token_skipped', forward(this.tokenSkipped$));
+
+    this.socket.on('counterStatusChanged', forward(this.queueUpdated$));
+    this.socket.on('notification', forward(this.notification$));
   }
 
   joinService(serviceId: string) {

@@ -27,7 +27,7 @@ import { RouterModule } from '@angular/router';
             </p>
             <div class="flex items-center gap-2 pt-2 text-xs text-slate-500">
               <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span>100% Real-Time Bidirectional Event Streaming via Socket.IO</span>
+              <span>Real-Time Queue Orchestration &amp; Instant Turn Alerts</span>
             </div>
           </div>
 
@@ -65,9 +65,9 @@ import { RouterModule } from '@angular/router';
 
         <!-- Bottom bar -->
         <div class="border-t border-slate-100 dark:border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
-          <p>&copy; 2026 WAITWISE Universal Smart Queue Platform. Fully Angular & Node.js Architecture.</p>
+          <p>&copy; 2026 WAITWISE &bull; Enterprise Virtual Queue &amp; Crowd Management Platform.</p>
           <div class="flex items-center gap-4">
-            <span class="font-mono text-[11px] text-slate-400">Angular 18 Standalone &bull; RxJS &bull; Tailwind CSS</span>
+            <span class="text-[11px] text-slate-400">High-Availability Multi-Tenant Queue System</span>
           </div>
         </div>
       </div>

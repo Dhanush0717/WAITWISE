@@ -11,6 +11,8 @@ export interface User {
   branchId?: string;
   assignedServiceId?: string;
   assignedCounterId?: string;
+  assignedService?: string | any;
+  assignedCounter?: string | any;
   status: 'active' | 'suspended' | 'invited';
   createdAt?: string;
   updatedAt?: string;

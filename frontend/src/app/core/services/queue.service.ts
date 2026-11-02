@@ -76,18 +76,22 @@ export class QueueService {
     );
   }
 
-  kioskJoin(payload: { serviceId: string; guestInfo: { name: string; phone?: string; identifier?: string }; priority?: string }): Observable<{ success: boolean; ticket: Ticket }> {
-    return this.api.post<{ success: boolean; ticket: Ticket }>('/queue/kiosk-join', payload).pipe(
+  kioskJoin(payload: { serviceId: string; guestInfo: { name: string; phone?: string; identifier?: string }; priority?: string }): Observable<any> {
+    return this.api.post<any>('/queues/kiosk-join', payload).pipe(
+      map(res => (res && res.data) ? res.data : res),
       tap(res => {
-        if (res && res.ticket) {
-          this.setActiveTicket(res.ticket);
+        const ticket = res?.ticket || res;
+        if (ticket && ticket.ticketNumber) {
+          this.setActiveTicket(ticket);
         }
       })
     );
   }
 
-  staffIssueToken(payload: { serviceId: string; guestInfo: { name: string; phone?: string }; priority?: string; notes?: string }): Observable<{ success: boolean; ticket: Ticket }> {
-    return this.api.post<{ success: boolean; ticket: Ticket }>('/queue/staff-issue', payload);
+  staffIssueToken(payload: { serviceId: string; guestInfo: { name: string; phone?: string }; priority?: string; notes?: string }): Observable<any> {
+    return this.api.post<any>('/queues/staff-issue', payload).pipe(
+      map(res => (res && res.data) ? res.data : res)
+    );
   }
 
   getTicketStatus(ticketId: string): Observable<Ticket> {

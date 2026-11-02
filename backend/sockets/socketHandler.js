@@ -65,9 +65,10 @@ const getIO = () => {
 // Real-time broadcast helpers
 const emitToService = (serviceId, event, data) => {
   if (ioInstance && serviceId) {
-    ioInstance.to(`service:${serviceId}`).emit(event, data);
+    const sId = serviceId.toString ? serviceId.toString() : String(serviceId);
+    ioInstance.to(`service:${sId}`).emit(event, data);
     // Also mirror to admin room for centralized monitoring
-    ioInstance.to('admin').emit(event, { ...data, serviceId });
+    ioInstance.to('admin').emit(event, { ...data, serviceId: sId });
   }
 };
 
