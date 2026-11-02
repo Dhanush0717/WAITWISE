@@ -30,6 +30,7 @@ export interface Ticket {
   serviceId: string | Service;
   counterId?: string | Counter;
   userId?: string | any;
+  customerName?: string;
   guestInfo?: GuestInfo;
   channel: TicketChannel;
   status: TicketStatus;

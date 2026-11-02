@@ -114,7 +114,7 @@ import { Service } from '../../core/models/service.model';
                 
                 <div class="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
                   <span class="font-bold text-slate-700 dark:text-slate-300">
-                    👤 {{ currentServingTicket()?.guestInfo?.name || currentServingTicket()?.userId?.name || 'Walk-In Customer' }}
+                    👤 {{ currentServingTicket()?.customerName || currentServingTicket()?.guestInfo?.name || currentServingTicket()?.userId?.name || 'Citizen' }}
                   </span>
                   <span>&bull;</span>
                   <span class="font-mono text-brand-600 font-bold uppercase">
@@ -457,15 +457,21 @@ export class StaffDashboardComponent implements OnInit, OnDestroy {
         next: (data) => {
           this.waitingQueue.set(data.waitingTickets || []);
           this.completedQueue.set(data.completedTickets || []);
-          if (counter.currentTicketId) {
-            const tid = typeof counter.currentTicketId === 'object' ? (counter.currentTicketId._id || counter.currentTicketId.id) : counter.currentTicketId;
+          const currentTid = counter.currentTicketId || (this.currentServingTicket() ? (this.currentServingTicket()?._id || (this.currentServingTicket() as any)?.id) : null);
+          if (currentTid) {
+            const tid = typeof currentTid === 'object' ? (currentTid._id || currentTid.id) : currentTid;
             this.api.get<any>(`/queues/tickets/${tid}`).pipe(
               map(res => (res && res.data) ? res.data : res)
             ).subscribe({
-              next: (t) => this.currentServingTicket.set(t?.ticket || t)
+              next: (t) => {
+                const refreshed = t?.ticket || t;
+                if (refreshed && ['CALLED', 'SERVING'].includes(refreshed.status)) {
+                  this.currentServingTicket.set(refreshed);
+                } else {
+                  this.currentServingTicket.set(null);
+                }
+              }
             });
-          } else {
-            this.currentServingTicket.set(null);
           }
         }
       });
@@ -493,6 +499,12 @@ export class StaffDashboardComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: (res) => {
         const ticket = res?.ticket || res;
+        const updatedCounter = res?.counter;
+        if (updatedCounter) {
+          this.activeCounter.set(updatedCounter);
+        } else if (ticket) {
+          this.activeCounter.update(c => c ? { ...c, currentTicketId: ticket._id } : null);
+        }
         if (ticket && ticket.ticketNumber) {
           this.currentServingTicket.set(ticket);
           this.audioService.playChime();

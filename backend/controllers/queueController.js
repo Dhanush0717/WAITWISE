@@ -1,5 +1,6 @@
 const Ticket = require('../models/Ticket');
 const Service = require('../models/Service');
+const Counter = require('../models/Counter');
 const QueueSession = require('../models/QueueSession');
 const Notification = require('../models/Notification');
 const { calculateWaitTime } = require('../utils/predictionEngine');
@@ -539,7 +540,7 @@ const getLiveQueue = async (req, res, next) => {
     const [waitingTickets, calledTickets, servingTickets, activeCounters] =
       await Promise.all([
         Ticket.find({ serviceId: service._id, status: 'WAITING' })
-          .select('ticketNumber sequenceNumber customerName joinedAt')
+          .select('ticketNumber sequenceNumber customerName priority joinedAt')
           .sort({ sequenceNumber: 1 })
           .limit(50),
         Ticket.find({ serviceId: service._id, status: 'CALLED' })
@@ -570,9 +571,12 @@ const getLiveQueue = async (req, res, next) => {
           activeCounters,
         },
         waitingTickets: waitingTickets.map((t, idx) => ({
+          _id: t._id,
           ticketNumber: t.ticketNumber,
+          sequenceNumber: t.sequenceNumber,
           position: idx + 1,
-          customerName: t.customerName.length > 4 ? `${t.customerName.substring(0, 3)}***` : t.customerName,
+          priority: t.priority || 'REGULAR',
+          customerName: t.customerName ? (t.customerName.length > 4 ? `${t.customerName.substring(0, 3)}***` : t.customerName) : 'Citizen',
           joinedAt: t.joinedAt,
         })),
         calledTickets,
