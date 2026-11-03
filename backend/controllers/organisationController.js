@@ -64,6 +64,96 @@ const getTerminologyForType = (type) => {
   return dictionary[type] || dictionary.corporate;
 };
 
+// @desc    Create / Onboard an organisation
+// @route   POST /api/organisations
+// @access  Public / Optional Auth
+const createOrganisation = async (req, res, next) => {
+  try {
+    const { name, type, description, contact, terminology, branding } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Organisation name is required' });
+    }
+
+    let slug = (req.body.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')).toLowerCase();
+    
+    // Ensure slug uniqueness
+    const existing = await Organisation.findOne({ slug });
+    if (existing) {
+      slug = `${slug}-${Date.now().toString(36)}`;
+    }
+
+    const defaultTerminology = getTerminologyForType(type || 'corporate');
+    const finalTerminology = terminology ? { ...defaultTerminology, ...terminology } : defaultTerminology;
+
+    const organisation = await Organisation.create({
+      name: name.trim(),
+      slug,
+      type: type || 'corporate',
+      description: description || '',
+      contact: contact || {},
+      terminology: finalTerminology,
+      branding: branding || {},
+      status: 'active'
+    });
+
+    // Create an initial default branch so services have a home immediately
+    const branchName = req.body.branchName || 'Main Facility Branch';
+    const branchCode = req.body.branchCode || 'MAIN-01';
+    const branch = await Branch.create({
+      organisationId: organisation._id,
+      name: branchName,
+      code: branchCode,
+      address: req.body.branchAddress || {},
+      status: 'active'
+    });
+
+    // Create a starter service desk so the new organization has an active desk ready to queue immediately
+    const starterService = await Service.create({
+      organisationId: organisation._id,
+      branchId: branch._id,
+      name: `${organisation.name} Intake Desk`,
+      code: 'MAIN',
+      prefix: 'A',
+      category: 'General',
+      description: `Primary intake desk for ${organisation.name}`,
+      avgServiceDuration: 5,
+      status: 'active',
+      isSelfJoinEnabled: true,
+      isKioskEnabled: true
+    });
+
+    await Counter.create({
+      organisationId: organisation._id,
+      branchId: branch._id,
+      serviceId: starterService._id,
+      counterNumber: 1,
+      name: 'Station 1',
+      status: 'open'
+    });
+
+    await logAction({
+      organisationId: organisation._id,
+      branchId: branch._id,
+      actorId: req.user ? req.user._id : null,
+      actorName: req.user ? req.user.name : 'System',
+      actorRole: req.user ? req.user.role : 'admin',
+      action: 'ORGANISATION_CREATED',
+      resourceType: 'Organisation',
+      resourceId: organisation._id,
+      metadata: { name: organisation.name, type: organisation.type },
+    });
+
+    res.status(201).json({
+      success: true,
+      data: organisation,
+      branch,
+      service: starterService
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Register a new organisation and create primary administrator
 // @route   POST /api/organisations/register
 // @access  Public
@@ -281,12 +371,12 @@ const updateOrganisation = async (req, res, next) => {
 
 // @desc    Create a new branch under an organisation
 // @route   POST /api/organisations/:id/branches
-// @access  Private (Org Admin or Super Admin)
+// @access  Private / Optional Auth
 const createBranch = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    if (req.user.role !== 'super_admin' && String(req.user.organisationId) !== String(id)) {
+    if (req.user && req.user.role !== 'super_admin' && req.user.organisationId && String(req.user.organisationId) !== String(id)) {
       return res.status(403).json({ success: false, message: 'Unauthorized for this organisation' });
     }
 
@@ -294,7 +384,7 @@ const createBranch = async (req, res, next) => {
 
     const branch = await Branch.create({
       organisationId: id,
-      name,
+      name: name || 'Main Center',
       code: code ? code.toUpperCase() : 'BR',
       address: address || {},
       coordinates: coordinates || { lat: 28.545, lng: 77.192 },
@@ -331,6 +421,7 @@ const listBranches = async (req, res, next) => {
 };
 
 module.exports = {
+  createOrganisation,
   registerOrganisation,
   listOrganisations,
   getOrganisation,

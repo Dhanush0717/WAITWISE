@@ -311,6 +311,9 @@ export class OrganisationOnboardingComponent {
       type: this.orgType,
       description: this.orgDescription,
       contact: { email: this.contactEmail },
+      branchName: this.branchName,
+      branchCode: this.branchCode,
+      branchAddress: { street: this.branchStreet, city: this.branchCity },
       terminology: {
         serviceLabel: this.serviceLabel,
         tokenLabel: this.tokenLabel,
@@ -322,23 +325,9 @@ export class OrganisationOnboardingComponent {
     };
 
     this.orgService.createOrganisation(payload).subscribe({
-      next: (createdOrg) => {
-        const orgId = createdOrg._id || (createdOrg as any).id;
-        // Create initial branch
-        this.orgService.createBranch(orgId, {
-          name: this.branchName,
-          code: this.branchCode,
-          address: { street: this.branchStreet, city: this.branchCity }
-        }).subscribe({
-          next: () => {
-            this.isLoading.set(false);
-            this.router.navigate(['/services']);
-          },
-          error: () => {
-            this.isLoading.set(false);
-            this.router.navigate(['/services']);
-          }
-        });
+      next: (createdOrg: any) => {
+        this.isLoading.set(false);
+        this.router.navigate(['/services']);
       },
       error: (err) => {
         this.isLoading.set(false);
