@@ -12,7 +12,7 @@ export type TicketStatus =
   | 'EXPIRED';
 
 export type TicketChannel = 'APP' | 'KIOSK' | 'STAFF';
-export type TicketPriority = 'REGULAR' | 'SENIOR' | 'EMERGENCY' | 'VIP';
+export type TicketPriority = 'REGULAR' | 'SENIOR' | 'VIP' | 'PRIORITY';
 
 export interface GuestInfo {
   name: string;
@@ -43,6 +43,7 @@ export interface Ticket {
   cancelledAt?: string;
   estimatedWaitTime?: number; // in minutes
   peopleAhead?: number;
+  currentlyServing?: { ticketNumber: string; counterName: string } | null;
   currentServingToken?: string;
   cancellationReason?: string;
   skipReason?: string;

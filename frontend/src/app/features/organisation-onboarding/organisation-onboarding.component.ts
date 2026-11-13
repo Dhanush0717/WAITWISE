@@ -331,7 +331,16 @@ export class OrganisationOnboardingComponent {
       },
       error: (err) => {
         this.isLoading.set(false);
-        this.errorMessage.set(err.error?.message || 'Could not register organization. Please check fields.');
+        const raw = err.error?.message || '';
+        if (raw.toLowerCase().includes('slug') || raw.toLowerCase().includes('already exists')) {
+          this.errorMessage.set('An organisation with this name already exists. Please use a different name.');
+        } else if (raw.toLowerCase().includes('duplicate') || raw.toLowerCase().includes('code')) {
+          this.errorMessage.set('Setup conflict detected. Please try again — this is usually resolved automatically.');
+        } else if (raw.toLowerCase().includes('email')) {
+          this.errorMessage.set('This email is already registered. Please use a different admin email.');
+        } else {
+          this.errorMessage.set(raw || 'Could not register organization. Please check your entries and try again.');
+        }
       }
     });
   }

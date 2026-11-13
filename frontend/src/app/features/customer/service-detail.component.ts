@@ -189,6 +189,8 @@ import { QrDisplayModalComponent } from '../../shared/components/qr-display-moda
                     type="tel"
                     [(ngModel)]="guestPhone"
                     name="guestPhone"
+                    pattern="[0-9]{10}"
+                    maxlength="10"
                     placeholder="Enter phone number (optional)"
                     class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs focus:ring-2 focus:ring-brand-500"
                   />

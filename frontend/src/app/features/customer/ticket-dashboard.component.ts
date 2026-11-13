@@ -64,7 +64,7 @@ import { QrDisplayModalComponent } from '../../shared/components/qr-display-moda
             <div class="flex items-start justify-between relative z-10 mb-6">
               <div>
                 <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  {{ getServiceCode() }} &bull; {{ ticket()?.channel }} Pass
+                  {{ getServiceCode() }} &bull; Queue Pass
                 </span>
                 <h1 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5">
                   {{ getServiceName() }}
@@ -410,7 +410,13 @@ export class TicketDashboardComponent implements OnInit, OnDestroy {
   ticketQrData(): string {
     const t = this.ticket();
     const id = t?._id || (t as any)?.id;
-    return typeof window !== 'undefined' ? `${window.location.origin}/ticket/${id}` : `https://waitwise.io/ticket/${id}`;
+    if (typeof window !== 'undefined') {
+      // Use actual hostname so QR works from other devices on same network
+      const host = window.location.hostname;
+      const port = window.location.port ? `:${window.location.port}` : '';
+      return `${window.location.protocol}//${host}${port}/ticket/${id}`;
+    }
+    return `/ticket/${id}`;
   }
 
   handleCancelTicket() {

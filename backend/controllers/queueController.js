@@ -538,22 +538,32 @@ const getLiveQueue = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
 
-    const [waitingTickets, calledTickets, servingTickets, activeCounters] =
+    const [waitingTickets, calledTickets, servingTickets, activeCounters, completedTickets] =
       await Promise.all([
         Ticket.find({ serviceId: service._id, status: 'WAITING' })
           .select('ticketNumber sequenceNumber customerName priority joinedAt')
           .sort({ sequenceNumber: 1 })
           .limit(50),
         Ticket.find({ serviceId: service._id, status: 'CALLED' })
+          .select('ticketNumber sequenceNumber customerName priority calledAt')
           .populate('assignedCounter', 'counterNumber name')
           .sort({ calledAt: -1 }),
         Ticket.find({ serviceId: service._id, status: 'SERVING' })
+          .select('ticketNumber sequenceNumber customerName priority serviceStartedAt')
           .populate('assignedCounter', 'counterNumber name')
           .sort({ serviceStartedAt: -1 }),
         Counter.countDocuments({
           serviceId: service._id,
           status: { $in: ['open', 'busy'] },
         }),
+        Ticket.find({
+          serviceId: service._id,
+          status: 'COMPLETED',
+          completedAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+        })
+          .select('ticketNumber sequenceNumber customerName priority completedAt')
+          .sort({ completedAt: -1 })
+          .limit(30),
       ]);
 
     const waitInfo = await calculateWaitTime(service._id, waitingTickets.length);
@@ -570,6 +580,7 @@ const getLiveQueue = async (req, res, next) => {
           called: calledTickets.length,
           serving: servingTickets.length,
           activeCounters,
+          completed: completedTickets.length,
         },
         waitingTickets: waitingTickets.map((t, idx) => ({
           _id: t._id,
@@ -577,11 +588,18 @@ const getLiveQueue = async (req, res, next) => {
           sequenceNumber: t.sequenceNumber,
           position: idx + 1,
           priority: t.priority || 'REGULAR',
-          customerName: t.customerName || 'Citizen',
+          customerName: t.customerName || 'Visitor',
           joinedAt: t.joinedAt,
         })),
         calledTickets,
         servingTickets,
+        completedTickets: completedTickets.map(t => ({
+          _id: t._id,
+          ticketNumber: t.ticketNumber,
+          customerName: t.customerName || 'Visitor',
+          completedAt: t.completedAt,
+          status: 'COMPLETED',
+        })),
         prediction: waitInfo,
       },
     });

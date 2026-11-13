@@ -30,7 +30,7 @@ import { Service } from '../../core/models/service.model';
                   {{ orgService.staffLabel() }} Station
                 </span>
                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                  {{ activeCounter()?.counterName || 'Select Counter' }}
+                  {{ activeCounter()?.name || activeCounter()?.counterName || 'Select Counter' }}
                 </span>
               </div>
               <h1 class="text-2xl font-black text-slate-900 dark:text-white">
@@ -48,30 +48,30 @@ import { Service } from '../../core/models/service.model';
               class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-xs font-bold focus:ring-2 focus:ring-brand-500">
               <option value="" disabled>Choose {{ orgService.counterLabel() }}</option>
               <option *ngFor="let c of counters()" [value]="c._id || c.id">
-                {{ c.counterName || ('Desk ' + c.counterNumber) }} ({{ c.status }})
+                {{ c.name || c.counterName || ('Desk ' + c.counterNumber) }} ({{ c.status }})
               </option>
             </select>
 
             <!-- Counter Status Toggle -->
             <div class="flex rounded-xl p-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold">
               <button
-                (click)="setCounterStatus('OPEN')"
-                [class.bg-emerald-500]="activeCounter()?.status === 'OPEN'"
-                [class.text-white]="activeCounter()?.status === 'OPEN'"
+                (click)="setCounterStatus('open')"
+                [class.bg-emerald-500]="activeCounter()?.status === 'open'"
+                [class.text-white]="activeCounter()?.status === 'open'"
                 class="px-3 py-1 rounded-lg transition-colors">
                 Open
               </button>
               <button
-                (click)="setCounterStatus('PAUSED')"
-                [class.bg-amber-500]="activeCounter()?.status === 'PAUSED'"
-                [class.text-white]="activeCounter()?.status === 'PAUSED'"
+                (click)="setCounterStatus('on_break')"
+                [class.bg-amber-500]="activeCounter()?.status === 'on_break'"
+                [class.text-white]="activeCounter()?.status === 'on_break'"
                 class="px-3 py-1 rounded-lg transition-colors">
                 Pause
               </button>
               <button
-                (click)="setCounterStatus('CLOSED')"
-                [class.bg-slate-600]="activeCounter()?.status === 'CLOSED'"
-                [class.text-white]="activeCounter()?.status === 'CLOSED'"
+                (click)="setCounterStatus('closed')"
+                [class.bg-slate-600]="activeCounter()?.status === 'closed'"
+                [class.text-white]="activeCounter()?.status === 'closed'"
                 class="px-3 py-1 rounded-lg transition-colors">
                 Close
               </button>
@@ -456,9 +456,15 @@ export class StaffDashboardComponent implements OnInit, OnDestroy {
       ).subscribe({
         next: (data) => {
           this.waitingQueue.set(data.waitingTickets || []);
+          // Use today's completed tickets from backend (now returned by live endpoint)
           this.completedQueue.set(data.completedTickets || []);
-          const currentTid = counter.currentTicketId || (this.currentServingTicket() ? (this.currentServingTicket()?._id || (this.currentServingTicket() as any)?.id) : null);
-          if (currentTid) {
+
+          // Restore currently serving ticket from counter's currentTicket field
+          const rawCurrentTicket = (counter as any).currentTicket;
+          const currentTid = typeof rawCurrentTicket === 'object'
+            ? (rawCurrentTicket?._id || rawCurrentTicket?.id)
+            : rawCurrentTicket;
+          if (currentTid && !this.currentServingTicket()) {
             const tid = typeof currentTid === 'object' ? (currentTid._id || currentTid.id) : currentTid;
             this.api.get<any>(`/queues/tickets/${tid}`).pipe(
               map(res => (res && res.data) ? res.data : res)
@@ -478,11 +484,11 @@ export class StaffDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  setCounterStatus(status: 'OPEN' | 'BUSY' | 'PAUSED' | 'CLOSED') {
+  setCounterStatus(status: 'open' | 'busy' | 'on_break' | 'closed') {
     const counter = this.activeCounter();
     if (!counter) return;
     const cid = counter._id || counter.id;
-    this.api.put(`/counters/${cid}/status`, { status }).subscribe({
+    this.api.patch(`/counters/${cid}/status`, { status }).subscribe({
       next: (updated: any) => {
         this.activeCounter.update(c => c ? { ...c, status } : null);
       }

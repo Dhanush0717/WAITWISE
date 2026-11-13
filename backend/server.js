@@ -133,11 +133,12 @@ if (process.env.NODE_ENV !== 'test') {
       console.warn('Initial data migration check:', e.message);
     }
 
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       console.log(`===============================================`);
       console.log(`🚀 WAITWISE Backend Server running on port ${PORT}`);
       console.log(`📡 Socket.IO Real-Time Engine Active`);
       console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`📱 LAN Access: http://10.49.9.138:${PORT}`);
       console.log(`===============================================`);
     });
   });

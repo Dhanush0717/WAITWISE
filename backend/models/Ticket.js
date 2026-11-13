@@ -52,6 +52,11 @@ const ticketSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    priority: {
+      type: String,
+      enum: ['REGULAR', 'SENIOR', 'VIP', 'PRIORITY'],
+      default: 'REGULAR',
+    },
     joinMethod: {
       type: String,
       enum: ['qr_mobile', 'web_portal', 'kiosk', 'staff_assisted'],

@@ -98,7 +98,9 @@ const createOrganisation = async (req, res, next) => {
 
     // Create an initial default branch so services have a home immediately
     const branchName = req.body.branchName || 'Main Facility Branch';
-    const branchCode = req.body.branchCode || 'MAIN-01';
+    // Make branch code unique by appending short random suffix if not provided
+    const rawCode = (req.body.branchCode || 'MAIN').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const branchCode = rawCode + '-' + Date.now().toString(36).toUpperCase().slice(-4);
     const branch = await Branch.create({
       organisationId: organisation._id,
       name: branchName,
@@ -213,10 +215,12 @@ const registerOrganisation = async (req, res, next) => {
     });
 
     // 2. Create Initial Main Branch
+    const rawBranchCode = (branchCode || 'MAIN').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const finalBranchCode = rawBranchCode + '-' + Date.now().toString(36).toUpperCase().slice(-4);
     const branch = await Branch.create({
       organisationId: organisation._id,
       name: branchName || 'Main Branch',
-      code: branchCode || 'MAIN',
+      code: finalBranchCode,
       address: branchAddress || {},
       status: 'active',
     });

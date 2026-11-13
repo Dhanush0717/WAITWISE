@@ -128,7 +128,7 @@ import { QrDisplayModalComponent } from '../../shared/components/qr-display-moda
                 type="tel"
                 [(ngModel)]="visitorPhone"
                 name="visitorPhone"
-                placeholder="+1 (555) 000-0000"
+                placeholder="Mobile number (optional)"
                 class="w-full px-4 py-3 rounded-xl border border-slate-700 bg-slate-800 text-white text-sm focus:ring-2 focus:ring-brand-500"
               />
             </div>
@@ -323,7 +323,12 @@ export class KioskComponent implements OnInit, OnDestroy {
   ticketQrData(): string {
     const t = this.dispensedTicket();
     const id = t?._id || (t as any)?.id;
-    return typeof window !== 'undefined' ? `${window.location.origin}/ticket/${id}` : `https://waitwise.io/ticket/${id}`;
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname;
+      const port = window.location.port ? `:${window.location.port}` : '';
+      return `${window.location.protocol}//${host}${port}/ticket/${id}`;
+    }
+    return `/ticket/${id}`;
   }
 
   ngOnDestroy() {

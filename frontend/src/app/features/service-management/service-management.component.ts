@@ -242,8 +242,8 @@ export class ServiceManagementComponent implements OnInit {
     this.api.post(`/counters`, {
       serviceId: id,
       counterNumber: count,
-      counterName: `Counter ${count}`,
-      status: 'OPEN'
+      name: `Counter ${count}`,
+      status: 'open'
     }).subscribe({
       next: () => {
         alert(`Counter ${count} added and opened for ${svc.name}!`);

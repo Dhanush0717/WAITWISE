@@ -117,9 +117,23 @@ export class QueueService {
 
   getTicketStatus(ticketId: string): Observable<Ticket> {
     return this.api.get<any>(`/queue/ticket/${ticketId}`).pipe(
-      map(res => (res && res.data) ? res.data : res),
+      map(res => {
+        // Backend returns { success, data: { ticket, peopleAhead, prediction, queuePosition } }
+        const payload = (res && res.data) ? res.data : res;
+        // If response has a nested .ticket key, unwrap it and merge extra fields in
+        if (payload && payload.ticket) {
+          return {
+            ...payload.ticket,
+            peopleAhead: payload.peopleAhead,
+            position: payload.queuePosition,
+            estimatedWaitTime: payload.prediction?.estimatedWaitMinutes,
+            currentlyServing: payload.currentlyServing,
+          } as Ticket;
+        }
+        return payload as Ticket;
+      }),
       tap(ticket => {
-        if (this.activeTicket() && (this.activeTicket()?._id === ticket._id || (this.activeTicket() as any)?.id === ticket._id)) {
+        if (ticket && this.activeTicket() && (this.activeTicket()?._id === ticket._id || (this.activeTicket() as any)?.id === ticket._id)) {
           this.setActiveTicket(ticket);
         }
       })
