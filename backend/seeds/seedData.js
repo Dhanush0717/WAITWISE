@@ -615,12 +615,20 @@ const seedData = async () => {
     console.log('  🎓 Student:     student@waitwise.campus         / student123 (Active Ticket ADM-005)');
     console.log('===================================================================');
 
-    await mongoose.disconnect();
-    process.exit(0);
+    if (require.main === module) {
+      await mongoose.disconnect();
+      process.exit(0);
+    }
   } catch (err) {
     console.error('Seeding error:', err);
-    process.exit(1);
+    if (require.main === module) {
+      process.exit(1);
+    }
   }
 };
 
-seedData();
+if (require.main === module) {
+  seedData();
+}
+
+module.exports = { seedData };

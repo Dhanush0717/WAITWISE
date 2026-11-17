@@ -121,6 +121,15 @@ if (process.env.NODE_ENV !== 'test') {
   connectDB().then(async () => {
     try {
       const User = require('./models/User');
+      const userCount = await User.countDocuments();
+      if (userCount === 0) {
+        console.log('⚡ Empty database detected on start. Auto-seeding initial demo data...');
+        const { seedData } = require('./seeds/seedData');
+        if (typeof seedData === 'function') {
+          await seedData();
+        }
+      }
+
       await User.updateMany(
         { email: 'clerk@citizenservices.gov' },
         { $set: { name: 'Counter Desk Officer' } }
