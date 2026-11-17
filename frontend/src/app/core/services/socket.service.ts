@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { Observable, Subject } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root'
@@ -20,13 +21,21 @@ export class SocketService {
   public notification$ = new Subject<any>();
 
   constructor() {
-    this.socket = io({
-      path: '/socket.io',
-      transports: ['websocket', 'polling'],
-      autoConnect: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 2000
-    });
+    this.socket = environment.socketUrl
+      ? io(environment.socketUrl, {
+          path: '/socket.io',
+          transports: ['websocket', 'polling'],
+          autoConnect: true,
+          reconnectionAttempts: 10,
+          reconnectionDelay: 2000
+        })
+      : io({
+          path: '/socket.io',
+          transports: ['websocket', 'polling'],
+          autoConnect: true,
+          reconnectionAttempts: 10,
+          reconnectionDelay: 2000
+        });
 
     this.registerSocketEvents();
   }
